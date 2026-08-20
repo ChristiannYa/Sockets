@@ -14,9 +14,11 @@ fn main() {
     let skt = UdpSocket::bind("0.0.0.0:0").expect("Couldn't bind");
     let pkt_schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
 
+    let (tx_ev, rx_ev) = mpsc::channel::<Event>();
+    let tx_ev_1 = tx_ev.clone();
+
     // Dedicated thread that listens for incoming server replies
     let skt_recv = skt.try_clone().expect("Socket clone failed");
-    let (tx_skt_recv, rx_skt_recv) = mpsc::channel::<String>();
     let pkt_schema_recv = pkt_schema.clone();
     thread::spawn(move || {
         let mut buf = [0; 1024];
@@ -24,23 +26,21 @@ fn main() {
             let (skt_src_buflen, _) = skt_recv
                 .recv_from(&mut buf)
                 .expect("Didn't receive data");
-
             let buf = &buf[..skt_src_buflen];
+
             let mut reader = BitReader::new(&pkt_schema_recv, buf);
             for (field_name, _) in pkt_schema_recv.fields.iter() {
                 if !reader.isset(field_name) {
                     continue;
                 }
 
-                tx_skt_recv
-                    .send(format!("@Server: {field_name:?}={}", reader.read(field_name)))
-                    .unwrap();
+                let msg = format!("@Server: {field_name:?}={}", reader.read(field_name));
+                tx_ev.send(Event::Server(msg)).unwrap();
             }
         }
     });
 
     // Dedicated thread that handles reading stdin
-    let (tx_stdin, rx_stdin) = mpsc::channel::<String>();
     thread::spawn(move || {
         let stdin = io::stdin();
         loop {
@@ -50,42 +50,40 @@ fn main() {
             stdin.lock().read_line(&mut line).unwrap();
             let line = line.trim().to_string();
 
-            tx_stdin.send(line).unwrap();
+            tx_ev_1.send(Event::Input(line)).unwrap();
         }
     });
 
     // Main thread handles packing and sending datagrams, and providing
     // server information
     let mut writer = BitWriter::new(&pkt_schema);
-    loop {
-        let input_recv = rx_stdin.try_recv().ok();
-        let is_input_recv_none = input_recv.is_none();
-        if let Some(input) = input_recv {
-            match input.as_str() {
-                "is_jumping" => writer.write(&FieldName::IsJumping, &1),
-                "is_crouching" => writer.write(&FieldName::IsCrouching, &1),
-                "quit" => break,
-                _ => {
-                    println!("Unkown command");
-                    continue;
-                }
+    for ev in rx_ev {
+        match ev {
+            Event::Server(msg) => {
+                println!("{msg}");
+                prompt();
             }
+            Event::Input(inp) => {
+                match inp.as_str() {
+                    "is_jumping" => writer.write(&FieldName::IsJumping, &1),
+                    "is_crouching" => writer.write(&FieldName::IsCrouching, &1),
+                    "quit" => break,
+                    _ => {
+                        println!("Unkown command");
+                        continue;
+                    }
+                }
 
-            skt.send_to(&writer.buf(), "127.0.0.1:34254")
-                .expect("Send failed");
-        }
-
-        let skt_recv = rx_skt_recv.try_recv().ok();
-        let is_skt_recv_none = skt_recv.is_none();
-        if let Some(skt_resp) = skt_recv {
-            println!("{skt_resp}");
-            prompt();
-        }
-
-        if is_input_recv_none || is_skt_recv_none {
-            thread::park();
+                skt.send_to(&writer.buf(), "127.0.0.1:34254")
+                    .expect("Send failed");
+            }
         }
     }
+}
+
+enum Event {
+    Input(String),
+    Server(String),
 }
 
 fn prompt() {
