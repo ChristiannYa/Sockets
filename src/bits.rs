@@ -5,6 +5,7 @@ mod writer;
 pub use reader::BitReader;
 pub use writer::BitWriter;
 
+#[derive(Clone)]
 pub struct PacketSchema<'a> {
     pub fields: &'a [(FieldName, usize)],
 }
@@ -39,7 +40,7 @@ pub enum FieldName {
     IsPremium,
     IsFriendly,
     IsLucky,
-    IsHit,
+    IsCrouching,
     RocketsCount,
     PlayerCount,
     KeysCount,

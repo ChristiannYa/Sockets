@@ -10,7 +10,7 @@ pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
     (FieldName::Level, 4),
     (FieldName::Mana, 4),
     (FieldName::RocketsCount, 3),
-    (FieldName::IsHit, 1),
+    (FieldName::IsCrouching, 1),
     (FieldName::IsFriendly, 1),
     (FieldName::KeysCount, 3),
 ];

@@ -94,7 +94,7 @@ mod tests {
 
         let mut bits_written_test = String::from("");
         for (field_name, field_val) in field_values.iter() {
-            writer.write(field_name.clone(), *field_val);
+            writer.write(field_name, field_val);
 
             let _ = field_meta_or_panic(field_schemas, field_name)
                 .pipe(|(_, field_len)| format!("{field_val:0field_len$b}"))

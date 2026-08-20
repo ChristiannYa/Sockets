@@ -31,7 +31,7 @@ impl<'a> BitWriter<'a> {
         }
     }
 
-    pub fn write(&mut self, field_name: FieldName, field_val: u32) {
+    pub fn write(&mut self, field_name: &FieldName, field_val: &u32) {
         let (field_ind, field_len) =
             field_meta_or_panic(self.packet_schema.fields, &field_name);
 
@@ -49,9 +49,9 @@ impl<'a> BitWriter<'a> {
 
         // Overflow
         if field_len > prog.rem_len {
-            self.write_ovf(field_val, field_len, &prog);
+            self.write_ovf(*field_val, field_len, &prog);
         } else {
-            self.buf[prog.ind] |= (field_val as u8) << prog.ofs;
+            self.buf[prog.ind] |= (*field_val as u8) << prog.ofs;
             self.bits_acc += field_len;
         }
     }
@@ -102,7 +102,7 @@ mod tests {
             // );
 
             bits_acc_str.insert_str(0, &field_as_bits_str);
-            writer.write(field_name.clone(), *field_val);
+            writer.write(field_name, field_val);
 
             // log::info!("bits acc (new): {}\n", split_into_bytes(&bits_acc_str));
         }
@@ -175,7 +175,7 @@ mod tests {
             (FieldName::Level, 4),
             (FieldName::Mana, 4),
             (FieldName::RocketsCount, 3),
-            (FieldName::IsHit, 1),
+            (FieldName::IsCrouching, 1),
             (FieldName::IsFriendly, 1),
             (FieldName::KeysCount, 3),
         ])?;
@@ -190,7 +190,7 @@ mod tests {
                 (FieldName::Level, 2),
                 (FieldName::Mana, 11),
                 (FieldName::RocketsCount, 2),
-                (FieldName::IsHit, 0),
+                (FieldName::IsCrouching, 0),
                 (FieldName::IsFriendly, 0),
                 (FieldName::KeysCount, 4),
             ];

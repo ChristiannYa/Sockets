@@ -1,32 +1,43 @@
 use sockets::{
     FIELD_LENGTHS,
-    bits::{BitReader, BitWriter, FieldName, PacketSchema},
+    bits::{BitReader, BitWriter, PacketSchema},
 };
-use std::net::UdpSocket;
+use std::{
+    collections::HashSet,
+    net::{SocketAddr, UdpSocket},
+};
 
 fn main() {
     let skt = UdpSocket::bind("127.0.0.1:34254").expect("Couldn't bind");
     let pkt_schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
     let mut buf = [0; 1024];
+    let mut skt_clients = HashSet::<SocketAddr>::new();
 
     loop {
-        let (byts_len, skt_adr) = skt
+        let (skt_src_buflen, skt_src) = skt
             .recv_from(&mut buf)
             .expect("Didn't receive data");
-        let buf = &buf[..byts_len];
+        skt_clients.insert(skt_src);
 
+        let buf = &buf[..skt_src_buflen];
         let mut reader = BitReader::new(&pkt_schema, buf);
+        let mut writer = BitWriter::new(&pkt_schema);
+
         for (field_name, _) in pkt_schema.fields.iter() {
-            if reader.isset(field_name) {
-                let value = reader.read(field_name);
-                println!("From {skt_adr}: {field_name:?} = {value}");
+            if !reader.isset(field_name) {
+                continue;
             }
+
+            let value = reader.read(field_name);
+            writer.write(field_name, &value);
+            println!("@{skt_src}: {field_name:?}={value}");
         }
 
-        // Respond to whichever client just sent this
-        let mut writer = BitWriter::new(&pkt_schema);
-        writer.write(FieldName::IsJumping, 1);
-        skt.send_to(&writer.buf(), skt_adr)
-            .unwrap_or_else(|_| panic!("Couldn't send data to {}", skt_adr));
+        // Broadcast to every client besides the current
+        for skt_client in skt_clients.iter() {
+            if *skt_client != skt_src {
+                skt.send_to(&writer.buf(), skt_client).ok();
+            }
+        }
     }
 }
