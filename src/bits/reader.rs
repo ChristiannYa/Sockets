@@ -75,6 +75,8 @@ impl<'a> BitReader<'a> {
 
         (self.buf_mask[mask_ind] >> mask_ofs) & 1 == 1
     }
+
+    pub fn t_peek_buf(&self) -> &'a [u8] { self.buf }
 }
 
 #[cfg(test)]

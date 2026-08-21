@@ -32,8 +32,7 @@ impl<'a> BitWriter<'a> {
     }
 
     pub fn write(&mut self, field_name: &FieldName, field_val: &u32) {
-        let (field_ind, field_len) =
-            field_meta_or_panic(self.packet_schema.fields, &field_name);
+        let (field_ind, field_len) = field_meta_or_panic(self.packet_schema.fields, field_name);
 
         // Handle buffer mask
         let mask_ind = field_ind / 8;

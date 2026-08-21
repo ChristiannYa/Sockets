@@ -56,14 +56,16 @@ fn main() {
 
     // Main thread handles packing and sending datagrams, and providing
     // server information
-    let mut writer = BitWriter::new(&pkt_schema);
     for ev in rx_ev {
         match ev {
             Event::Server(msg) => {
                 println!("{msg}");
                 prompt();
             }
+
             Event::Input(inp) => {
+                let mut writer = BitWriter::new(&pkt_schema);
+
                 match inp.as_str() {
                     "is_jumping" => writer.write(&FieldName::IsJumping, &1),
                     "is_crouching" => writer.write(&FieldName::IsCrouching, &1),
