@@ -3,7 +3,15 @@ name = "sockets"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "bitp"
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 tap = "1.0.1"
 log = "0.4"
 env_logger = "0.11"
+godot = { version = "0.5.5", features = ["api-4-7"], optional = true }
+
+[features]
+godot = ["dep:godot"]

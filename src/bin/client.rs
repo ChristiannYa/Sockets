@@ -5,7 +5,7 @@ use std::{
     thread,
 };
 
-use sockets::{
+use bitp::{
     FIELD_LENGTHS,
     bits::{BitReader, BitWriter, FieldName, PacketSchema},
 };

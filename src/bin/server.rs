@@ -1,4 +1,4 @@
-use sockets::{
+use bitp::{
     FIELD_LENGTHS,
     bits::{BitReader, BitWriter, PacketSchema},
 };
