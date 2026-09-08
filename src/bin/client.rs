@@ -76,7 +76,7 @@ fn main() {
                     }
                 }
 
-                skt.send_to(&writer.buf(), "127.0.0.1:34254")
+                skt.send_to(&writer.buf(), "10.0.0.4:34254")
                     .expect("Send failed");
             }
         }

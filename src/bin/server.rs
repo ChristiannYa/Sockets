@@ -9,7 +9,7 @@ use std::{
 use tap::Pipe;
 
 fn main() {
-    let skt = UdpSocket::bind("127.0.0.1:34254").expect("Couldn't bind");
+    let skt = UdpSocket::bind("0.0.0.0:34254").expect("Couldn't bind");
     let pkt_schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
     let mut buf = [0; 1024];
 
