@@ -54,7 +54,7 @@ fn main() {
 
             let value = reader.read(field_name);
             writer.write(field_name, &value);
-            println!("@{skt_src}: {field_name:?}={value}");
+            println!("@{skt_src} #{sess_id}: {field_name:?}={value}");
         }
 
         // Broadcast to every client besides the current
