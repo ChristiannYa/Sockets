@@ -1,10 +1,12 @@
 use bitp::{
-    FIELD_LENGTHS, bits::{BitReader, BitWriter, FieldName, PacketSchema},
+    FIELD_LENGTHS,
+    bits::{BitReader, BitWriter, FieldName, PacketSchema},
+};
+use std::{
+    collections::HashMap,
+    net::{SocketAddr, UdpSocket},
 };
 use tap::Pipe;
-use std::{
-    collections::{HashMap}, net::{SocketAddr, UdpSocket},
-};
 
 fn main() {
     let skt = UdpSocket::bind("127.0.0.1:34254").expect("Couldn't bind");
@@ -18,7 +20,6 @@ fn main() {
         let (skt_src_buflen, skt_src) = skt
             .recv_from(&mut buf)
             .expect("Didn't receive data");
-<<<<<<< HEAD
 
         // Bail early on packets too short to even hold the mask bytes the
         // schema expects.
@@ -27,18 +28,17 @@ fn main() {
         if skt_src_buflen < pkt_schema.fields.len().div_ceil(8) {
             continue;
         }
-
-        skt_clients.insert(skt_src);
-=======
         let sess_id = *skt_clients.entry(skt_src).or_insert_with(|| {
-            next_sess_id.pipe(|id| { next_sess_id += 1; id })
+            next_sess_id.pipe(|id| {
+                next_sess_id += 1;
+                id
+            })
         });
->>>>>>> b40405ffa454471365c7da47f5dfda18c0e0c6a0
 
         let buf = &buf[..skt_src_buflen];
         let mut reader = BitReader::new(&pkt_schema, buf);
         let mut writer = BitWriter::new(&pkt_schema);
-        
+
         writer.write(&FieldName::SessionId, &sess_id);
 
         for (field_name, _) in pkt_schema.fields.iter() {
