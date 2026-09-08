@@ -6,7 +6,6 @@ use std::{
     collections::HashMap,
     net::{SocketAddr, UdpSocket},
 };
-use tap::Pipe;
 
 fn main() {
     let skt = UdpSocket::bind("0.0.0.0:34254").expect("Couldn't bind");
@@ -19,9 +18,7 @@ fn main() {
     let mut skt_seqs = HashMap::<SocketAddr, u8>::new();
 
     loop {
-        let (skt_src_buflen, skt_src) = skt
-            .recv_from(&mut buf)
-            .expect("Didn't receive data");
+        let (skt_src_buflen, skt_src) = skt.recv_from(&mut buf).expect("Didn't receive data");
 
         // Bail early on packets too short to even hold the mask bytes the
         // schema expects.
@@ -35,33 +32,71 @@ fn main() {
         let mut reader = BitReader::new(&pkt_schema, buf);
         let mut writer = BitWriter::new(&pkt_schema);
 
-        let sess_id = *skt_clients.entry(skt_src).or_insert_with(|| {
-            next_sess_id.pipe(|id| {
-                next_sess_id += 1;
-                id
-            })
-        });
-        writer.write(&FieldName::SessionId, &sess_id);
+        let sid = prepare_packet(
+            &skt_src,
+            &mut skt_clients,
+            &mut skt_seqs,
+            &mut writer,
+            &mut next_sess_id,
+        );
 
-        let seq: &mut u8 = skt_seqs.entry(skt_src).or_insert(0);
-        *seq = seq.wrapping_add(1);
-        writer.write(&FieldName::Seq, &(*seq as u32));
+        handle_writes(&pkt_schema, &mut reader, &mut writer, &skt_src, sid);
 
-        for (field_name, _) in pkt_schema.fields.iter() {
-            if !reader.isset(field_name) {
-                continue;
-            }
+        broadcast(&skt, &skt_clients, &skt_src, &writer.buf());
+    }
+}
 
-            let value = reader.read(field_name);
-            writer.write(field_name, &value);
-            println!("@{skt_src} #{sess_id}: {field_name:?}={value}");
+/// Prepends the session id and then the sequence number to the packet.
+/// **Returns** the session id
+fn prepare_packet(
+    skt_src: &SocketAddr,
+    skt_clients: &mut HashMap<SocketAddr, u32>,
+    skt_seqs: &mut HashMap<SocketAddr, u8>,
+    writer: &mut BitWriter,
+    next_sess_id: &mut u32,
+) -> u32 {
+    let sid: u32 = *skt_clients.entry(*skt_src).or_insert_with(|| {
+        let id = *next_sess_id;
+        *next_sess_id += 1;
+        id
+    });
+    writer.write(&FieldName::SessionId, &sid);
+
+    let seq: &mut u8 = skt_seqs.entry(*skt_src).or_insert(0);
+    *seq = seq.wrapping_add(1);
+    writer.write(&FieldName::Sequence, &(*seq as u32));
+
+    sid
+}
+
+fn handle_writes(
+    pkt_schema: &PacketSchema<'_>,
+    reader: &mut BitReader,
+    writer: &mut BitWriter,
+    skt_src: &SocketAddr,
+    sid: u32,
+) {
+    for (field_name, _) in pkt_schema.fields.iter() {
+        if !reader.isset(field_name) {
+            continue;
         }
 
-        // Broadcast to every client besides the current
-        for skt_client in skt_clients.keys() {
-            if *skt_client != skt_src {
-                skt.send_to(&writer.buf(), skt_client).ok();
-            }
+        let value = reader.read(field_name);
+        writer.write(field_name, &value);
+        println!("@{skt_src} #{sid}: {field_name:?}={value}");
+    }
+}
+
+/// Broadcast to every client besides the current
+fn broadcast(
+    skt: &UdpSocket,
+    skt_clients: &HashMap<SocketAddr, u32>,
+    skt_src: &SocketAddr,
+    buf: &[u8],
+) {
+    for skt_client in skt_clients.keys() {
+        if *skt_client != *skt_src {
+            skt.send_to(buf, skt_client).ok();
         }
     }
 }
