@@ -17,6 +17,15 @@ fn main() {
         let (skt_src_buflen, skt_src) = skt
             .recv_from(&mut buf)
             .expect("Didn't receive data");
+
+        // Bail early on packets too short to even hold the mask bytes the
+        // schema expects.
+        // Protects `BitReader::new()`'s `split_at()` from panicking and
+        // taking the whole server down over one client's bad packet.
+        if skt_src_buflen < pkt_schema.fields.len().div_ceil(8) {
+            continue;
+        }
+
         skt_clients.insert(skt_src);
 
         let buf = &buf[..skt_src_buflen];
