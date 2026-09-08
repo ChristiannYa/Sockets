@@ -32,7 +32,7 @@ fn main() {
         let mut reader = BitReader::new(&pkt_schema, buf);
         let mut writer = BitWriter::new(&pkt_schema);
 
-        let sid = prepare_packet(
+        let sid = seed_packet(
             &skt_src,
             &mut skt_clients,
             &mut skt_seqs,
@@ -46,9 +46,9 @@ fn main() {
     }
 }
 
-/// Prepends the session id and then the sequence number to the packet.
+/// Seeds packet wth session ID and then sequence number.
 /// **Returns** the session id
-fn prepare_packet(
+fn seed_packet(
     skt_src: &SocketAddr,
     skt_clients: &mut HashMap<SocketAddr, u32>,
     skt_seqs: &mut HashMap<SocketAddr, u8>,
