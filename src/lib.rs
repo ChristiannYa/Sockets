@@ -8,6 +8,7 @@ use crate::bits::FieldName;
 
 pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
     (FieldName::SessionId, 6),
+    (FieldName::Seq, 8),
     (FieldName::Health, 3),
     (FieldName::PlayerCount, 4),
     (FieldName::IsJumping, 1),

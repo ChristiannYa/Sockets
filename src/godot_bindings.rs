@@ -1,5 +1,5 @@
 use godot::prelude::*;
-use crate::{FIELD_LENGTHS, bits::{BitReader, BitWriter, FieldName, PacketSchema}};
+use crate::{FIELD_LENGTHS, bits::{BitReader, BitWriter, PacketSchema}};
 
 struct BitpExtension;
 

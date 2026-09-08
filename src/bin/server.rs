@@ -16,6 +16,8 @@ fn main() {
     let mut skt_clients = HashMap::<SocketAddr, u32>::new();
     let mut next_sess_id: u32 = 0;
 
+    let mut skt_seqs = HashMap::<SocketAddr, u8>::new();
+
     loop {
         let (skt_src_buflen, skt_src) = skt
             .recv_from(&mut buf)
@@ -28,18 +30,22 @@ fn main() {
         if skt_src_buflen < pkt_schema.fields.len().div_ceil(8) {
             continue;
         }
+
+        let buf = &buf[..skt_src_buflen];
+        let mut reader = BitReader::new(&pkt_schema, buf);
+        let mut writer = BitWriter::new(&pkt_schema);
+
         let sess_id = *skt_clients.entry(skt_src).or_insert_with(|| {
             next_sess_id.pipe(|id| {
                 next_sess_id += 1;
                 id
             })
         });
-
-        let buf = &buf[..skt_src_buflen];
-        let mut reader = BitReader::new(&pkt_schema, buf);
-        let mut writer = BitWriter::new(&pkt_schema);
-
         writer.write(&FieldName::SessionId, &sess_id);
+
+        let seq: &mut u8 = skt_seqs.entry(skt_src).or_insert(0);
+        *seq = seq.wrapping_add(1);
+        writer.write(&FieldName::Seq, &(*seq as u32));
 
         for (field_name, _) in pkt_schema.fields.iter() {
             if !reader.isset(field_name) {
@@ -48,7 +54,7 @@ fn main() {
 
             let value = reader.read(field_name);
             writer.write(field_name, &value);
-            println!("@{skt_src} #{sess_id}: {field_name:?}={value}");
+            println!("@{skt_src}: {field_name:?}={value}");
         }
 
         // Broadcast to every client besides the current
