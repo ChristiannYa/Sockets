@@ -1,5 +1,5 @@
 use godot::prelude::*;
-use crate::{FIELD_LENGTHS, bits::{BitReader, BitWriter, PacketSchema}};
+use crate::{FIELD_LENGTHS, bits::{BitReader, BitWriter, FieldName, PacketSchema}};
 
 struct BitpExtension;
 
@@ -28,7 +28,7 @@ impl GdPacketSchema {
         for (field_name, _) in self.schema.fields.iter() {
             if reader.isset(field_name) {
                 dict.set(
-                    format!("{field_name:?}"), 
+                    format!("{field_name:?}"),
                     reader.read(field_name)
                 );
             }

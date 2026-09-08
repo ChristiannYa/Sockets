@@ -36,6 +36,7 @@ impl<'a> PacketSchema<'a> {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum FieldName {
+    SessionId,
     IsJumping,
     IsPremium,
     IsFriendly,

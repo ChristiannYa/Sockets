@@ -1,22 +1,24 @@
 use bitp::{
-    FIELD_LENGTHS,
-    bits::{BitReader, BitWriter, PacketSchema},
+    FIELD_LENGTHS, bits::{BitReader, BitWriter, FieldName, PacketSchema},
 };
+use tap::Pipe;
 use std::{
-    collections::HashSet,
-    net::{SocketAddr, UdpSocket},
+    collections::{HashMap}, net::{SocketAddr, UdpSocket},
 };
 
 fn main() {
     let skt = UdpSocket::bind("127.0.0.1:34254").expect("Couldn't bind");
     let pkt_schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
     let mut buf = [0; 1024];
-    let mut skt_clients = HashSet::<SocketAddr>::new();
+
+    let mut skt_clients = HashMap::<SocketAddr, u32>::new();
+    let mut next_sess_id: u32 = 0;
 
     loop {
         let (skt_src_buflen, skt_src) = skt
             .recv_from(&mut buf)
             .expect("Didn't receive data");
+<<<<<<< HEAD
 
         // Bail early on packets too short to even hold the mask bytes the
         // schema expects.
@@ -27,10 +29,17 @@ fn main() {
         }
 
         skt_clients.insert(skt_src);
+=======
+        let sess_id = *skt_clients.entry(skt_src).or_insert_with(|| {
+            next_sess_id.pipe(|id| { next_sess_id += 1; id })
+        });
+>>>>>>> b40405ffa454471365c7da47f5dfda18c0e0c6a0
 
         let buf = &buf[..skt_src_buflen];
         let mut reader = BitReader::new(&pkt_schema, buf);
         let mut writer = BitWriter::new(&pkt_schema);
+        
+        writer.write(&FieldName::SessionId, &sess_id);
 
         for (field_name, _) in pkt_schema.fields.iter() {
             if !reader.isset(field_name) {
@@ -39,11 +48,11 @@ fn main() {
 
             let value = reader.read(field_name);
             writer.write(field_name, &value);
-            println!("@{skt_src}: {field_name:?}={value}");
+            println!("@{skt_src} #{sess_id}: {field_name:?}={value}");
         }
 
         // Broadcast to every client besides the current
-        for skt_client in skt_clients.iter() {
+        for skt_client in skt_clients.keys() {
             if *skt_client != skt_src {
                 skt.send_to(&writer.buf(), skt_client).ok();
             }

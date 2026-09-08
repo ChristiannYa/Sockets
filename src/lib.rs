@@ -7,6 +7,7 @@ pub mod godot_bindings;
 use crate::bits::FieldName;
 
 pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
+    (FieldName::SessionId, 6),
     (FieldName::Health, 3),
     (FieldName::PlayerCount, 4),
     (FieldName::IsJumping, 1),
