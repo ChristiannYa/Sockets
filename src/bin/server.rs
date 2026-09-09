@@ -7,6 +7,8 @@ use std::{
     net::{SocketAddr, UdpSocket},
 };
 
+type CliStates = HashMap<u32, HashMap<FieldName, u32>>;
+
 fn main() {
     let skt = UdpSocket::bind("0.0.0.0:34254").expect("Couldn't bind");
     let pkt_schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
@@ -16,6 +18,8 @@ fn main() {
     let mut next_sess_id: u32 = 0;
 
     let mut skt_seqs = HashMap::<SocketAddr, u8>::new();
+
+    let mut cli_states = CliStates::new();
 
     loop {
         let (skt_src_buflen, skt_src) = skt.recv_from(&mut buf).expect("Didn't receive data");
@@ -32,6 +36,9 @@ fn main() {
         let mut reader = BitReader::new(&pkt_schema, buf);
         let mut writer = BitWriter::new(&pkt_schema);
 
+        // Capture client newness before registering new potential client
+        let is_new_cli = !skt_clients.contains_key(&skt_src);
+
         let sid = seed_packet(
             &skt_src,
             &mut skt_clients,
@@ -40,7 +47,18 @@ fn main() {
             &mut next_sess_id,
         );
 
-        handle_writes(&pkt_schema, &mut reader, &mut writer, &skt_src, sid);
+        if is_new_cli {
+            sync_client(&pkt_schema, &mut cli_states, sid, &skt, &skt_src);
+        }
+
+        handle_writes(
+            &pkt_schema,
+            &mut cli_states,
+            &mut reader,
+            &mut writer,
+            &skt_src,
+            sid,
+        );
 
         broadcast(&skt, &skt_clients, &skt_src, &writer.buf());
     }
@@ -48,11 +66,11 @@ fn main() {
 
 /// Seeds packet wth session ID and then sequence number.
 /// **Returns** the session id
-fn seed_packet(
+fn seed_packet<'a>(
     skt_src: &SocketAddr,
     skt_clients: &mut HashMap<SocketAddr, u32>,
     skt_seqs: &mut HashMap<SocketAddr, u8>,
-    writer: &mut BitWriter,
+    writer: &mut BitWriter<'a>,
     next_sess_id: &mut u32,
 ) -> u32 {
     let sid: u32 = *skt_clients.entry(*skt_src).or_insert_with(|| {
@@ -69,10 +87,11 @@ fn seed_packet(
     sid
 }
 
-fn handle_writes(
-    pkt_schema: &PacketSchema<'_>,
-    reader: &mut BitReader,
-    writer: &mut BitWriter,
+fn handle_writes<'a>(
+    pkt_schema: &PacketSchema<'a>,
+    cli_states: &mut CliStates,
+    reader: &mut BitReader<'a>,
+    writer: &mut BitWriter<'a>,
     skt_src: &SocketAddr,
     sid: u32,
 ) {
@@ -83,6 +102,9 @@ fn handle_writes(
 
         let value = reader.read(field_name);
         writer.write(field_name, &value);
+
+        save_client_state(field_name, cli_states, sid, value);
+
         println!("@{skt_src} #{sid}: {field_name:?}={value}");
     }
 }
@@ -98,5 +120,37 @@ fn broadcast(
         if *skt_client != *skt_src {
             skt.send_to(buf, skt_client).ok();
         }
+    }
+}
+
+fn save_client_state(field_name: &FieldName, states: &mut CliStates, sid: u32, value: u32) {
+    states
+        .entry(sid)
+        .or_default()
+        .insert(field_name.clone(), value);
+}
+
+fn sync_client<'a>(
+    pkt_schema: &PacketSchema<'a>,
+    cli_states: &mut CliStates,
+    cur_sid: u32,
+    skt: &UdpSocket,
+    skt_src: &SocketAddr,
+) {
+    for (cli_sid, states) in cli_states.iter() {
+        if *cli_sid == cur_sid {
+            continue;
+        }
+
+        let mut writer = BitWriter::new(pkt_schema);
+        writer.write(&FieldName::SessionId, cli_sid);
+
+        for (field_name, _) in pkt_schema.fields.iter() {
+            if let Some(value) = states.get(field_name) {
+                writer.write(field_name, value);
+            }
+        }
+
+        skt.send_to(&writer.buf(), skt_src).ok();
     }
 }
