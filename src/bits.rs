@@ -38,6 +38,7 @@ impl<'a> PacketSchema<'a> {
 pub enum FieldName {
     SessionId,
     Sequence,
+    IsNewClient,
     IsJumping,
     IsPremium,
     IsFriendly,

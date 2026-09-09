@@ -124,6 +124,7 @@ fn inform_new_client<'a>(
 ) {
     let mut writer = BitWriter::new(pkt_schema);
     writer.write(&FieldName::SessionId, &new_cli_sid);
+    writer.write(&FieldName::IsNewClient, &1);
     skt.send_to(&writer.buf(), skt_src).ok();
 }
 
