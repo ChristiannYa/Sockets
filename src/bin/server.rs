@@ -15,7 +15,7 @@ fn main() {
     let mut buf = [0; 1024];
 
     let mut skt_clis = HashMap::<SocketAddr, u32>::new();
-    let mut next_sess_id: u32 = 0;
+    let mut next_sid: u32 = 0;
 
     let mut skt_seqs = HashMap::<SocketAddr, u8>::new();
 
@@ -44,7 +44,7 @@ fn main() {
             &mut skt_clis,
             &mut skt_seqs,
             &mut writer,
-            &mut next_sess_id,
+            &mut next_sid,
         );
 
         if is_new_cli {
@@ -71,11 +71,11 @@ fn seed_packet<'a>(
     skt_clis: &mut HashMap<SocketAddr, u32>,
     skt_seqs: &mut HashMap<SocketAddr, u8>,
     writer: &mut BitWriter<'a>,
-    next_sess_id: &mut u32,
+    next_sid: &mut u32,
 ) -> u32 {
     let sid: u32 = *skt_clis.entry(*skt_src).or_insert_with(|| {
-        let id = *next_sess_id;
-        *next_sess_id += 1;
+        let id = *next_sid;
+        *next_sid += 1;
         id
     });
     writer.write(&FieldName::SessionId, &sid);
