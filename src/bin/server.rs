@@ -48,7 +48,8 @@ fn main() {
         );
 
         if is_new_cli {
-            sync_client(&pkt_schema, &mut cli_states, sid, &skt, &skt_src);
+            inform_new_client(&pkt_schema, sid, &skt, &skt_src);
+            sync_new_client(&pkt_schema, &mut cli_states, sid, &skt, &skt_src);
         }
 
         handle_writes(
@@ -115,15 +116,27 @@ fn save_client_state(field_name: &FieldName, states: &mut ClientStates, sid: u32
         .insert(field_name.clone(), value);
 }
 
-fn sync_client<'a>(
+fn inform_new_client<'a>(
+    pkt_schema: &PacketSchema<'a>,
+    new_cli_sid: u32,
+    skt: &UdpSocket,
+    skt_src: &SocketAddr,
+) {
+    let mut writer = BitWriter::new(pkt_schema);
+    writer.write(&FieldName::SessionId, &new_cli_sid);
+    skt.send_to(&writer.buf(), skt_src).ok();
+}
+
+fn sync_new_client<'a>(
     pkt_schema: &PacketSchema<'a>,
     cli_states: &mut ClientStates,
-    cur_sid: u32,
+    new_cli_sid: u32,
     skt: &UdpSocket,
     skt_src: &SocketAddr,
 ) {
     for (cli_sid, states) in cli_states.iter() {
-        if *cli_sid == cur_sid {
+        // Skip the new client's own session id
+        if *cli_sid == new_cli_sid {
             continue;
         }
 
