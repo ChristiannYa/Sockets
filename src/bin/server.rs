@@ -50,8 +50,11 @@ fn main() {
         if is_new_cli {
             skt.send_to(&new_client_seed_buf(&pkt_schema, sid), skt_src)
                 .ok();
-            skt.send_to(&sync_buf(&pkt_schema, &cli_states, sid), skt_src)
-                .ok();
+
+            if !cli_states.is_empty() {
+                skt.send_to(&sync_buf(&pkt_schema, &cli_states, sid), skt_src)
+                    .ok();
+            }
         }
 
         handle_writes(
