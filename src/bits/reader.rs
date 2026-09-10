@@ -18,13 +18,15 @@ pub struct BitReader<'a> {
 impl<'a> BitReader<'a> {
     pub fn new(packet_schema: &'a PacketSchema, buf: &'a [u8]) -> Self {
         let (buf_mask, buf) = Self::split_buf(packet_schema.fields, buf);
-        BitReader { packet_schema, buf, buf_mask, bits_acc: 0 }
+        BitReader {
+            packet_schema,
+            buf,
+            buf_mask,
+            bits_acc: 0,
+        }
     }
 
-    fn split_buf(
-        field_schemas: &'a [(FieldName, usize)],
-        buf: &'a [u8],
-    ) -> (&'a [u8], &'a [u8]) {
+    fn split_buf(field_schemas: &'a [(FieldName, usize)], buf: &'a [u8]) -> (&'a [u8], &'a [u8]) {
         field_schemas
             .len()
             .div_ceil(8)
@@ -58,8 +60,7 @@ impl<'a> BitReader<'a> {
 
             self.bits_acc += read_len;
 
-            let prog =
-                (field_len - read_len).pipe(|len| BufferProgress::calc(self.bits_acc, &len));
+            let prog = (field_len - read_len).pipe(|len| BufferProgress::calc(self.bits_acc, &len));
 
             (self.read_ovf(&prog) << read_len) | merge
         } else {
@@ -75,17 +76,13 @@ impl<'a> BitReader<'a> {
 
         (self.buf_mask[mask_ind] >> mask_ofs) & 1 == 1
     }
-
-    pub fn t_peek_buf(&self) -> &'a [u8] { self.buf }
 }
 
 #[cfg(test)]
 mod tests {
     use tap::{Pipe, Tap};
 
-    use crate::bits::{
-        BitReader, BitWriter, FieldName, PacketSchema, shared::field_meta_or_panic,
-    };
+    use crate::bits::{BitReader, BitWriter, FieldName, PacketSchema, shared::field_meta_or_panic};
 
     fn t_reads_match(
         field_schemas: &[(FieldName, usize)],
@@ -144,11 +141,17 @@ mod tests {
 
     #[test]
     fn read_base() -> Result<(), String> {
-        let field_schemas =
-            [(FieldName::Health, 3), (FieldName::PlayerCount, 4), (FieldName::IsJumping, 1)];
+        let field_schemas = [
+            (FieldName::Health, 3),
+            (FieldName::PlayerCount, 4),
+            (FieldName::IsJumping, 1),
+        ];
 
-        let field_values =
-            [(FieldName::Health, 5), (FieldName::PlayerCount, 9), (FieldName::IsJumping, 1)];
+        let field_values = [
+            (FieldName::Health, 5),
+            (FieldName::PlayerCount, 9),
+            (FieldName::IsJumping, 1),
+        ];
 
         t_reads_match(&field_schemas, &field_values)
     }

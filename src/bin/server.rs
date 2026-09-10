@@ -1,5 +1,5 @@
 use bitp::{
-    FIELD_LENGTHS,
+    FIELD_LENGTHS, PacketKind,
     bits::{BitReader, BitWriter, FieldName, PacketSchema},
 };
 use std::{
@@ -48,8 +48,10 @@ fn main() {
         );
 
         if is_new_cli {
-            inform_new_client(&pkt_schema, sid, &skt, &skt_src);
-            sync_new_client(&pkt_schema, &mut cli_states, sid, &skt, &skt_src);
+            skt.send_to(&new_client_seed_buf(&pkt_schema, sid), skt_src)
+                .ok();
+            skt.send_to(&sync_buf(&pkt_schema, &cli_states, sid), skt_src)
+                .ok();
         }
 
         handle_writes(
@@ -61,7 +63,9 @@ fn main() {
             sid,
         );
 
-        broadcast(&skt, &skt_clis, &skt_src, &writer.buf());
+        let mut buf = vec![PacketKind::Single as u8];
+        buf.extend(writer.buf());
+        broadcast(&skt, &skt_clis, &skt_src, &buf);
     }
 }
 
@@ -116,42 +120,62 @@ fn save_client_state(field_name: &FieldName, states: &mut ClientStates, sid: u32
         .insert(field_name.clone(), value);
 }
 
-fn inform_new_client<'a>(
-    pkt_schema: &PacketSchema<'a>,
-    new_cli_sid: u32,
-    skt: &UdpSocket,
-    skt_src: &SocketAddr,
-) {
+/// **Returns *seed* data the client needs before receiving main
+/// information
+fn new_client_seed_buf<'a>(pkt_schema: &PacketSchema<'a>, new_cli_sid: u32) -> Vec<u8> {
+    let mut buf = vec![PacketKind::Single as u8];
+
     let mut writer = BitWriter::new(pkt_schema);
     writer.write(&FieldName::SessionId, &new_cli_sid);
     writer.write(&FieldName::IsNewClient, &1);
-    skt.send_to(&writer.buf(), skt_src).ok();
+
+    buf.extend(writer.buf());
+    buf
 }
 
-fn sync_new_client<'a>(
+/// **Returns a byte buffer** containing every other connected client's
+/// state to sync a newly-joined client.
+/// Layout:
+/// ```
+/// let record_count = vec![2];
+///
+/// // 1=record_len, 2=mask_bytes, 3=value_bytes
+/// // `record_len` is the byte length of the client's `BitWriter::buf()`'s
+/// // output, including `SessionId` as a "seed" value to identify the record
+/// let record1 = vec![1, 2, 3];
+/// let record2 = vec![1, 2, 3];
+///
+/// // [2, 1, 2, 3, 1, 2, 3]
+/// return [record_count, record1, record2].concat()
+/// ```
+fn sync_buf<'a>(
     pkt_schema: &PacketSchema<'a>,
-    cli_states: &mut ClientStates,
+    cli_states: &ClientStates,
     new_cli_sid: u32,
-    skt: &UdpSocket,
-    skt_src: &SocketAddr,
-) {
-    for (cli_sid, states) in cli_states.iter() {
-        // Skip the new client's own session id
-        if *cli_sid == new_cli_sid {
-            continue;
-        }
+) -> Vec<u8> {
+    let records: Vec<Vec<u8>> = cli_states
+        .iter()
+        .filter(|(sid, _)| **sid != new_cli_sid)
+        .map(|(sid, cli_state)| {
+            let mut writer = BitWriter::new(pkt_schema);
+            writer.write(&FieldName::SessionId, sid);
 
-        let mut writer = BitWriter::new(pkt_schema);
-        writer.write(&FieldName::SessionId, cli_sid);
-
-        for (field_name, _) in pkt_schema.fields.iter() {
-            if let Some(value) = states.get(field_name) {
-                writer.write(field_name, value);
+            for (field_name, _) in pkt_schema.fields.iter() {
+                if let Some(val) = cli_state.get(field_name) {
+                    writer.write(field_name, val);
+                }
             }
-        }
 
-        skt.send_to(&writer.buf(), skt_src).ok();
+            writer.buf()
+        })
+        .collect();
+
+    let mut buf_sync = vec![PacketKind::Batch as u8, records.len() as u8];
+    for record in records {
+        buf_sync.push(record.len() as u8);
+        buf_sync.extend(record);
     }
+    buf_sync
 }
 
 /// Broadcast to every client besides the current

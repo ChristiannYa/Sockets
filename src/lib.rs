@@ -16,3 +16,9 @@ pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
     (FieldName::IsCrouching, 1),
     (FieldName::IsFriendly, 1),
 ];
+
+#[repr(u8)]
+pub enum PacketKind {
+    Single,
+    Batch,
+}

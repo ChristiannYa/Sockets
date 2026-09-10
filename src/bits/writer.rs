@@ -75,7 +75,9 @@ impl<'a> BitWriter<'a> {
         }
     }
 
-    pub fn buf(&self) -> Vec<u8> { [self.buf_mask.as_slice(), self.buf.as_slice()].concat() }
+    pub fn buf(&self) -> Vec<u8> {
+        [self.buf_mask.as_slice(), self.buf.as_slice()].concat()
+    }
 }
 
 #[cfg(test)]
@@ -358,7 +360,11 @@ mod tests {
             .map(|(f_name, _)| -> String {
                 let is_set = reader.isset(f_name);
                 // println!("(T) {:?} set: {is_set}", f_name);
-                if is_set { "1".to_string() } else { "0".to_string() }
+                if is_set {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                }
             })
             .collect::<Vec<String>>()
             .join("");
