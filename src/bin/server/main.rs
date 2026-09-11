@@ -32,7 +32,7 @@ fn main() {
         let mut reader = BitReader::new(packer.schema(), buf);
         let mut writer = BitWriter::new(packer.schema());
 
-        // Capture client newness before registering new potential client
+        // Capture client newness before potential registration
         let is_new_cli = sess.is_new_cli(&skt_src);
 
         let sid = sess.sid_or_reg(&skt_src);
