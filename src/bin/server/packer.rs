@@ -16,8 +16,23 @@ impl<'a> Packer<'a> {
         Packer { schema }
     }
 
-    /// Returns packed fields
-    pub fn pack_fields(
+    /// Reads every field out of `buf`, echoing each one into a new packet seeded
+    /// with `sid` and `seq` for the broadcast.
+    /// Returns (decoded fields, broadcast buffer).
+    pub fn process(&self, buf: &[u8], sid: u32, seq: u8) -> (Vec<(FieldName, u32)>, Vec<u8>) {
+        let mut reader = BitReader::new(&self.schema, buf);
+        let mut writer = BitWriter::new(&self.schema);
+
+        self.seed(&mut writer, sid, seq);
+        let decoded: Vec<(FieldName, u32)> = self.decode(&mut reader, &mut writer);
+
+        let mut buf = vec![PacketKind::Single as u8];
+        buf.extend(writer.buf());
+
+        (decoded, buf)
+    }
+
+    fn decode(
         &self,
         reader: &mut BitReader<'a>,
         writer: &mut BitWriter<'a>,
@@ -39,7 +54,7 @@ impl<'a> Packer<'a> {
 
     /// Seeds writer's buffer with [FieldName]'s `SessionId` and `Sequence`
     /// regardless of client's newness
-    pub fn seed(&self, writer: &mut BitWriter<'a>, sid: u32, seq: u8) {
+    fn seed(&self, writer: &mut BitWriter<'a>, sid: u32, seq: u8) {
         writer.write(&FieldName::SessionId, &sid);
         writer.write(&FieldName::Sequence, &(seq as u32));
     }
@@ -57,7 +72,7 @@ impl<'a> Packer<'a> {
         buf
     }
 
-    /// **Returns a buffer** containing every other connected client's
+    /// Returns a buffer containing every other connected client's
     /// state to sync a newly-joined client.
     /// Layout:
     /// ```

@@ -11,7 +11,7 @@ impl Net {
         Net { skt }
     }
 
-    /// **Returns** (number of bytes read, origin)
+    /// Returns (number of bytes read, origin)
     pub fn recv_from(&self, buf: &mut [u8]) -> (usize, SocketAddr) {
         self.skt.recv_from(buf).expect("Didn't receive data")
     }

@@ -4,10 +4,6 @@ mod session;
 mod world;
 
 use crate::{net::Net, packer::Packer, session::Session, world::state::State};
-use bitp::{
-    PacketKind,
-    bits::{BitReader, BitWriter},
-};
 
 fn main() {
     let net = Net::build("0.0.0.0:34254");
@@ -28,16 +24,9 @@ fn main() {
             continue;
         }
 
-        let buf = &buf[..skt_src_buflen];
-        let mut reader = BitReader::new(packer.schema(), buf);
-        let mut writer = BitWriter::new(packer.schema());
-
         // Capture client newness before potential registration
         let is_new_cli = sess.is_new_cli(&skt_src);
-
         let sid = sess.sid_or_reg(&skt_src);
-        let seq = sess.next_seq(&skt_src);
-        packer.seed(&mut writer, sid, seq);
 
         if is_new_cli {
             net.send_to(&packer.welcome(sid), skt_src);
@@ -47,13 +36,14 @@ fn main() {
             }
         }
 
-        let packed = packer.pack_fields(&mut reader, &mut writer);
-        for (field_name, val) in packed {
+        let buf = &buf[..skt_src_buflen];
+        let seq = sess.next_seq(&skt_src);
+
+        let (decoded, broadcast_buf) = packer.process(buf, sid, seq);
+        for (field_name, val) in decoded {
             state.save_cli(&field_name, sid, val);
         }
 
-        let mut buf = vec![PacketKind::Single as u8];
-        buf.extend(writer.buf());
-        net.broadcast(sess.addrs(), &skt_src, &buf);
+        net.broadcast(sess.addrs(), &skt_src, &broadcast_buf);
     }
 }
