@@ -41,6 +41,7 @@ fn main() {
 
         let (decoded, broadcast_buf) = packer.process(buf, sid, seq);
         for (field_name, val) in decoded {
+            println!("@{skt_src} #{sid}: {field_name:?}={val}");
             state.save_cli(&field_name, sid, val);
         }
 
