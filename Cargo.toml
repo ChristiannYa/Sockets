@@ -12,6 +12,7 @@ tap = "1.0.1"
 log = "0.4"
 env_logger = "0.11"
 godot = { version = "0.5.5", features = ["api-4-7"], optional = true }
+rand = "0.10.2"
 
 [features]
 godot = ["dep:godot"]
