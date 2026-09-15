@@ -1,5 +1,3 @@
-use crate::bits::FieldName;
-
 #[derive(Debug)]
 pub struct BufferProgress {
     /// Current byte index

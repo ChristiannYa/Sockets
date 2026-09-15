@@ -30,13 +30,13 @@ fn main() {
         if is_new_cli {
             net.send_to(&world.welcome_buf(sid), skt_src);
 
-            let is_states_empty = world.is_empty();
+            let is_world_empty = world.is_empty();
 
             let buf = world.spawn_loc_buf(sid);
             net.send_to(&buf, skt_src);
             net.broadcast(sess.addrs(), &skt_src, &buf);
 
-            if !is_states_empty {
+            if !is_world_empty {
                 net.send_to(&world.sync_buf(sid), skt_src);
             }
         }
