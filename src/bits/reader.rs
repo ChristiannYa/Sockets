@@ -1,10 +1,7 @@
 use tap::Pipe;
 
 use crate::{
-    bits::{
-        FieldName, PacketSchema,
-        shared::{BufferProgress, field_meta_or_panic},
-    },
+    bits::{FieldName, PacketSchema, shared::BufferProgress},
     util::mask,
 };
 
@@ -34,14 +31,14 @@ impl<'a> BitReader<'a> {
     }
 
     pub fn read(&mut self, field_name: &FieldName) -> u32 {
-        let (_, field_len) = field_meta_or_panic(self.packet_schema.fields, field_name);
+        let field = self.packet_schema.info_of(field_name);
 
-        BufferProgress::calc(self.bits_acc, &field_len).pipe(|prog| {
+        BufferProgress::calc(self.bits_acc, &field.len).pipe(|prog| {
             if prog.ovf_len > 0 {
                 self.read_ovf(&prog)
             } else {
-                self.bits_acc += field_len;
-                ((self.buf[prog.ind] >> prog.ofs) as u32) & mask(&field_len)
+                self.bits_acc += field.len;
+                ((self.buf[prog.ind] >> prog.ofs) as u32) & mask(&field.len)
             }
         })
     }
@@ -70,9 +67,9 @@ impl<'a> BitReader<'a> {
     }
 
     pub fn isset(&self, field_name: &FieldName) -> bool {
-        let (field_ind, _) = field_meta_or_panic(self.packet_schema.fields, field_name);
-        let mask_ind = field_ind / 8;
-        let mask_ofs = field_ind % 8;
+        let field = self.packet_schema.info_of(field_name);
+        let mask_ind = field.ind / 8;
+        let mask_ofs = field.ind % 8;
 
         (self.buf_mask[mask_ind] >> mask_ofs) & 1 == 1
     }
@@ -82,21 +79,26 @@ impl<'a> BitReader<'a> {
 mod tests {
     use tap::{Pipe, Tap};
 
-    use crate::bits::{BitReader, BitWriter, FieldName, PacketSchema, shared::field_meta_or_panic};
+    use crate::bits::{BitReader, BitWriter, FieldName, PacketSchema};
 
     fn t_reads_match(
-        field_schemas: &[(FieldName, usize)],
+        schema: &PacketSchema,
         field_values: &[(FieldName, u32)],
     ) -> Result<(), String> {
-        let schema = PacketSchema::build(field_schemas)?;
         let mut writer = BitWriter::new(&schema);
 
         let mut bits_written_test = String::from("");
         for (field_name, field_val) in field_values.iter() {
             writer.write(field_name, field_val);
 
-            let _ = field_meta_or_panic(field_schemas, field_name)
-                .pipe(|(_, field_len)| format!("{field_val:0field_len$b}"))
+            let _ = schema
+                .fields
+                .pipe(|_| {
+                    format!(
+                        "{field_val:0field_len$b}",
+                        field_len = schema.info_of(field_name).len
+                    )
+                })
                 .tap(|field_bits| {
                     for bit in field_bits.chars() {
                         bits_written_test.insert(0, bit)
@@ -141,11 +143,12 @@ mod tests {
 
     #[test]
     fn read_base() -> Result<(), String> {
-        let field_schemas = [
+        let schema = PacketSchema::build(&[
             (FieldName::Health, 3),
             (FieldName::PlayerCount, 4),
             (FieldName::IsJumping, 1),
-        ];
+        ])
+        .unwrap();
 
         let field_values = [
             (FieldName::Health, 5),
@@ -153,19 +156,20 @@ mod tests {
             (FieldName::IsJumping, 1),
         ];
 
-        t_reads_match(&field_schemas, &field_values)
+        t_reads_match(&schema, &field_values)
     }
 
     #[test]
     fn read_overflow() -> Result<(), String> {
-        let field_schemas = [
+        let schema = PacketSchema::build(&[
             (FieldName::Health, 3),
             (FieldName::RocketsCount, 3),
             (FieldName::PlayerCount, 4),
             (FieldName::KeysCount, 3),
             (FieldName::Time24, 5),
             (FieldName::IsFriendly, 1),
-        ];
+        ])
+        .unwrap();
 
         let field_values = [
             (FieldName::Health, 2),
@@ -176,12 +180,12 @@ mod tests {
             (FieldName::IsFriendly, 0),
         ];
 
-        t_reads_match(&field_schemas, &field_values)
+        t_reads_match(&schema, &field_values)
     }
 
     #[test]
     fn read_super_overflow_v1() -> Result<(), String> {
-        let field_schemas = [
+        let schema = PacketSchema::build(&[
             (FieldName::Health, 3),
             (FieldName::RocketsCount, 3),
             (FieldName::PlayerCount, 4),
@@ -189,7 +193,8 @@ mod tests {
             (FieldName::Time24, 5),
             (FieldName::IsFriendly, 1),
             (FieldName::Exp, 24),
-        ];
+        ])
+        .unwrap();
 
         let field_values = [
             (FieldName::Health, 2),
@@ -201,12 +206,12 @@ mod tests {
             (FieldName::Exp, 9842952),
         ];
 
-        t_reads_match(&field_schemas, &field_values)
+        t_reads_match(&schema, &field_values)
     }
 
     #[test]
     fn read_misc_super_overflow_v2() -> Result<(), String> {
-        let field_schemas = [
+        let schema = PacketSchema::build(&[
             (FieldName::Health, 3),
             (FieldName::RocketsCount, 3),
             (FieldName::PlayerCount, 4),
@@ -219,7 +224,8 @@ mod tests {
             (FieldName::IsPremium, 1),
             (FieldName::Boss, 31),
             (FieldName::IsLucky, 1),
-        ];
+        ])
+        .unwrap();
 
         let field_values = [
             (FieldName::Health, 2),
@@ -236,14 +242,14 @@ mod tests {
             (FieldName::IsLucky, 1),
         ];
 
-        t_reads_match(&field_schemas, &field_values)
+        t_reads_match(&schema, &field_values)
     }
 
     #[test]
     fn read_schema_partial() -> Result<(), String> {
         crate::util::test::init_test_logger();
 
-        let field_schemas = [
+        let schema = PacketSchema::build(&[
             (FieldName::Health, 3),
             (FieldName::RocketsCount, 3),
             (FieldName::PlayerCount, 4),
@@ -251,7 +257,8 @@ mod tests {
             (FieldName::Time24, 5),
             (FieldName::IsFriendly, 1),
             (FieldName::Exp, 24),
-        ];
+        ])
+        .unwrap();
 
         let field_values = [
             (FieldName::Health, 2),
@@ -260,22 +267,22 @@ mod tests {
             (FieldName::Exp, 655332),
         ];
 
-        t_reads_match(&field_schemas, &field_values)
+        t_reads_match(&schema, &field_values)
     }
 
     #[test]
     fn read_misc_0() -> Result<(), String> {
-        let field_schemas = [(FieldName::IsFriendly, 1)];
+        let schema = PacketSchema::build(&[(FieldName::IsFriendly, 1)]).unwrap();
         let field_values = [(FieldName::IsFriendly, 0)];
 
-        t_reads_match(&field_schemas, &field_values)
+        t_reads_match(&schema, &field_values)
     }
 
     #[test]
     fn read_misc_u8() -> Result<(), String> {
-        let field_schemas = [(FieldName::Boss, 32)];
+        let schema = PacketSchema::build(&[(FieldName::Boss, 32)]).unwrap();
         let field_values = [(FieldName::Boss, 20)];
 
-        t_reads_match(&field_schemas, &field_values)
+        t_reads_match(&schema, &field_values)
     }
 }

@@ -29,17 +29,3 @@ impl BufferProgress {
         }
     }
 }
-
-/// Returns the (index, length) tuple
-/// TODO: Replace with `PacketSchema`'s `.info_of()`
-pub fn field_meta_or_panic(
-    fields: &[(FieldName, usize)],
-    field_name: &FieldName,
-) -> (usize, usize) {
-    fields
-        .iter()
-        .enumerate()
-        .find(|(_, (field_iter_name, _))| *field_iter_name == *field_name)
-        .map(|(ind, (_, field_iter_len))| (ind, *field_iter_len))
-        .unwrap_or_else(|| panic!("Field '{:?}' not found", field_name))
-}

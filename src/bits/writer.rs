@@ -1,10 +1,7 @@
 use tap::Pipe;
 
 use crate::{
-    bits::{
-        FieldName, PacketSchema,
-        shared::{BufferProgress, field_meta_or_panic},
-    },
+    bits::{FieldName, PacketSchema, shared::BufferProgress},
     util::mask,
 };
 
@@ -32,14 +29,14 @@ impl<'a> BitWriter<'a> {
     }
 
     pub fn write(&mut self, field_name: &FieldName, field_val: &u32) {
-        let (field_ind, field_len) = field_meta_or_panic(self.packet_schema.fields, field_name);
+        let field = self.packet_schema.info_of(field_name);
 
         // Handle buffer mask
-        let mask_ind = field_ind / 8;
-        let mask_ofs = field_ind % 8;
+        let mask_ind = field.ind / 8;
+        let mask_ofs = field.ind % 8;
         self.buf_mask[mask_ind] |= 1 << mask_ofs;
 
-        let prog = BufferProgress::calc(self.bits_acc, &field_len);
+        let prog = BufferProgress::calc(self.bits_acc, &field.len);
 
         // New byte allocation needed for the write
         if prog.ind >= self.buf.len() {
@@ -47,11 +44,11 @@ impl<'a> BitWriter<'a> {
         }
 
         // Overflow
-        if field_len > prog.rem_len {
-            self.write_ovf(*field_val, field_len, &prog);
+        if field.len > prog.rem_len {
+            self.write_ovf(*field_val, field.len, &prog);
         } else {
             self.buf[prog.ind] |= (*field_val as u8) << prog.ofs;
-            self.bits_acc += field_len;
+            self.bits_acc += field.len;
         }
     }
 
@@ -85,7 +82,7 @@ mod tests {
     use tap::{Pipe, Tap};
 
     use crate::{
-        bits::{BitReader, BitWriter, FieldName, PacketSchema, shared::field_meta_or_panic},
+        bits::{BitReader, BitWriter, FieldName, PacketSchema},
         util::split_into_bytes,
     };
 
@@ -93,9 +90,9 @@ mod tests {
         let mut bits_acc_str: String = String::from("");
 
         for (field_name, field_val) in fields.iter() {
-            let (_, field_len) = field_meta_or_panic(writer.packet_schema.fields, field_name);
+            let field = writer.packet_schema.info_of(field_name);
 
-            let field_as_bits_str = format!("{field_val:0f_meta$b}", f_meta = field_len);
+            let field_as_bits_str = format!("{field_val:0f_meta$b}", f_meta = field.len);
 
             // log::info!(
             //     "field as bits: {field_as_bits_str}, bits acc (cur): {}",
