@@ -1,6 +1,7 @@
 use crate::{
     FIELD_LENGTHS, PacketKind,
     bits::{BitReader, BitWriter, PacketSchema},
+    loc_codec,
 };
 use godot::prelude::*;
 
@@ -81,6 +82,16 @@ impl GdPacketSchema {
         }
 
         buf_out
+    }
+
+    #[func]
+    fn decode_loc_x(&self, loc: u32) -> f32 {
+        loc_codec(&self.schema).x.decode(loc)
+    }
+
+    #[func]
+    fn decode_loc_z(&self, loc: u32) -> f32 {
+        loc_codec(&self.schema).z.decode(loc)
     }
 
     #[func]
