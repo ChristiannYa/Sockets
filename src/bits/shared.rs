@@ -21,11 +21,17 @@ impl BufferProgress {
         let ofs = bits_acc % 8;
         let rem_len = 8 - ofs;
         let ovf_len = field_len.saturating_sub(rem_len);
-        BufferProgress { ind, ofs, rem_len, ovf_len }
+        BufferProgress {
+            ind,
+            ofs,
+            rem_len,
+            ovf_len,
+        }
     }
 }
 
 /// Returns the (index, length) tuple
+/// TODO: Replace with `PacketSchema`'s `.info_of()`
 pub fn field_meta_or_panic(
     fields: &[(FieldName, usize)],
     field_name: &FieldName,
