@@ -53,6 +53,7 @@ impl<'a> PacketSchema<'a> {
 pub enum FieldName {
     SessionId,
     Sequence,
+    Ping,
     IsNewPlayer,
     IsJumping,
     IsPremium,

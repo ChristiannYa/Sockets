@@ -23,6 +23,7 @@ pub struct LocCodec {
 pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
     (FieldName::SessionId, 6),
     (FieldName::Sequence, 8),
+    (FieldName::Ping, 1),
     (FieldName::LocationX, 8),
     (FieldName::LocationZ, 8),
     (FieldName::IsNewPlayer, 1),
