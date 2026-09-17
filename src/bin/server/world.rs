@@ -3,10 +3,8 @@ use std::collections::HashMap;
 use bitp::{
     FIELD_LENGTHS, PacketKind,
     bits::{BitReader, BitWriter, FieldName, PacketSchema},
-    loc_codec,
+    hsv_codec, loc_codec,
 };
-
-use crate::world::logic::spawn::spawn_pt;
 
 pub mod logic;
 
@@ -32,17 +30,23 @@ impl<'a> World<'a> {
         self.pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
     }
 
-    /// Returns a buffer with the X and Z location of the player
-    pub fn spawn_loc_buf(&mut self, sid: u32) -> Vec<u8> {
-        let spawn_pt = spawn_pt();
-        let loc_codec = loc_codec(&self.schema);
+    /// Returns a buffer with spawn information
+    /// - X and Z location of the player
+    /// - HSV color of the player
+    pub fn player_spawn_buf(&mut self, sid: u32) -> Vec<u8> {
+        let (spawn_pt, spawn_pt_codec) = (logic::spawn::player_spawn_pt(), loc_codec(&self.schema));
+        let (hsv, hsv_codec) = (logic::color::hsv(), hsv_codec(&self.schema));
+
         let fields = [
-            (FieldName::LocationX, loc_codec.x.encode(spawn_pt.x)),
-            (FieldName::LocationZ, loc_codec.z.encode(spawn_pt.z)),
+            (FieldName::LocationX, spawn_pt_codec.x.encode(spawn_pt.x)),
+            (FieldName::LocationZ, spawn_pt_codec.z.encode(spawn_pt.z)),
+            (FieldName::ColorH, hsv_codec.h.encode(hsv.h)),
+            (FieldName::ColorS, hsv_codec.s.encode(hsv.s)),
+            (FieldName::ColorV, hsv_codec.v.encode(hsv.v)),
         ];
 
-        for (field_name, val) in &fields {
-            self.state.save(field_name, sid, *val);
+        for (field_name, val) in fields.iter() {
+            self.state.save(field_name, sid, *val)
         }
 
         self.pack(&fields, sid)

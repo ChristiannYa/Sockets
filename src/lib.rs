@@ -20,12 +20,21 @@ pub struct LocCodec {
     pub z: FixedPoint,
 }
 
+pub struct HsvCodec {
+    pub h: FixedPoint,
+    pub s: FixedPoint,
+    pub v: FixedPoint,
+}
+
 pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
     (FieldName::DevSessionId, 6),
     (FieldName::DevSequence, 8),
     (FieldName::DevPing, 1),
     (FieldName::LocationX, 8),
     (FieldName::LocationZ, 8),
+    (FieldName::ColorH, 8),
+    (FieldName::ColorS, 8),
+    (FieldName::ColorV, 8),
     (FieldName::DevIsNewPlayer, 1),
     (FieldName::Health, 3),
     (FieldName::PlayerCount, 4),
@@ -35,20 +44,28 @@ pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
 ];
 
 pub fn loc_codec(schema: &PacketSchema) -> LocCodec {
-    let unit_m = 0.1;
-    let offset = 128;
+    let fixed_pt = |field_name: &FieldName| FixedPoint {
+        unit_m: 0.1,
+        offset: 128,
+        bits_len: schema.info_of(field_name).len,
+    };
 
     LocCodec {
-        x: FixedPoint {
-            unit_m,
-            offset,
-            bits_len: schema.info_of(&FieldName::LocationX).len,
-        },
+        x: fixed_pt(&FieldName::LocationX),
+        z: fixed_pt(&FieldName::LocationZ),
+    }
+}
 
-        z: FixedPoint {
-            unit_m,
-            offset,
-            bits_len: schema.info_of(&FieldName::LocationZ).len,
-        },
+pub fn hsv_codec(schema: &PacketSchema) -> HsvCodec {
+    let fixed_pt = |field_name: &FieldName| FixedPoint {
+        unit_m: 0.1,
+        offset: 128,
+        bits_len: schema.info_of(field_name).len,
+    };
+
+    HsvCodec {
+        h: fixed_pt(&FieldName::ColorH),
+        s: fixed_pt(&FieldName::ColorS),
+        v: fixed_pt(&FieldName::ColorV),
     }
 }
