@@ -6,7 +6,7 @@ pub mod godot_bindings;
 
 use crate::{
     bits::{FieldName, PacketSchema},
-    util::fixed_pt::FixedPoint,
+    util::{fixed_pt::FixedPoint, mask},
 };
 
 #[repr(u8)]
@@ -32,9 +32,9 @@ pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
     (FieldName::DevPing, 1),
     (FieldName::LocationX, 8),
     (FieldName::LocationZ, 8),
-    (FieldName::ColorH, 8),
-    (FieldName::ColorS, 8),
-    (FieldName::ColorV, 8),
+    (FieldName::ColorH, 6),
+    (FieldName::ColorS, 3),
+    (FieldName::ColorV, 3),
     (FieldName::DevIsNewPlayer, 1),
     (FieldName::Health, 3),
     (FieldName::PlayerCount, 4),
@@ -45,7 +45,7 @@ pub static FIELD_LENGTHS: &[(bits::FieldName, usize)] = &[
 
 pub fn loc_codec(schema: &PacketSchema) -> LocCodec {
     let fixed_pt = |field_name: &FieldName| FixedPoint {
-        unit_m: 0.1,
+        step: 0.1,
         offset: 128,
         bits_len: schema.info_of(field_name).len,
     };
@@ -57,10 +57,14 @@ pub fn loc_codec(schema: &PacketSchema) -> LocCodec {
 }
 
 pub fn hsv_codec(schema: &PacketSchema) -> HsvCodec {
-    let fixed_pt = |field_name: &FieldName| FixedPoint {
-        unit_m: 0.1,
-        offset: 128,
-        bits_len: schema.info_of(field_name).len,
+    let fixed_pt = |field_name: &FieldName| {
+        let field = schema.info_of(field_name);
+        let bits_max_val = mask(&field.len) as f32;
+        FixedPoint {
+            step: 1.0 / bits_max_val,
+            offset: 0,
+            bits_len: field.len,
+        }
     };
 
     HsvCodec {

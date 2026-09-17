@@ -1,7 +1,7 @@
 use crate::{
     FIELD_LENGTHS, PacketKind,
     bits::{BitReader, BitWriter, PacketSchema},
-    loc_codec,
+    hsv_codec, loc_codec,
 };
 use godot::prelude::*;
 
@@ -85,13 +85,19 @@ impl NetPacketCodec {
     }
 
     #[func]
-    fn decode_loc_x(&self, loc: u32) -> f32 {
-        loc_codec(&self.schema).x.decode(loc)
+    fn decode_loc(&self, x: u32, z: u32) -> Vector3 {
+        let codec = loc_codec(&self.schema);
+        Vector3::new(codec.x.decode(x), 0.0, codec.z.decode(z))
     }
 
     #[func]
-    fn decode_loc_z(&self, loc: u32) -> f32 {
-        loc_codec(&self.schema).z.decode(loc)
+    fn decode_hsv(&self, h: u32, s: u32, v: u32) -> Color {
+        let codec = hsv_codec(&self.schema);
+        Color::from_hsv(
+            codec.h.decode(h) as f64,
+            codec.s.decode(s) as f64,
+            codec.v.decode(v) as f64,
+        )
     }
 
     #[func]
