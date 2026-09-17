@@ -12,12 +12,12 @@ unsafe impl ExtensionLibrary for BitpExtension {}
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
-struct GdPacketSchema {
+struct NetPacketCodec {
     schema: PacketSchema<'static>,
 }
 
 #[godot_api]
-impl GdPacketSchema {
+impl NetPacketCodec {
     #[constant]
     const PACKET_KIND_SINGLE: u8 = PacketKind::Single as u8;
     #[constant]
