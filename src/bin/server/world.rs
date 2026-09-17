@@ -29,7 +29,7 @@ impl<'a> World<'a> {
     /// Returns a buffer with information indicating that the player is new.
     /// Information: [PacketKind]'s `Single`, [FieldName]'s `SessionId` and `IsNewPlayer`
     pub fn welcome_buf(&self, sid: u32) -> Vec<u8> {
-        self.pack(&[(FieldName::IsNewPlayer, 1)], sid)
+        self.pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
     }
 
     /// Returns a buffer with the X and Z location of the player
@@ -51,7 +51,7 @@ impl<'a> World<'a> {
     /// Pack arbitrary values into a fresh buffer
     fn pack(&self, fields: &[(FieldName, u32)], sid: u32) -> Vec<u8> {
         let mut writer = BitWriter::new(&self.schema);
-        writer.write(&FieldName::SessionId, &sid);
+        writer.write(&FieldName::DevSessionId, &sid);
 
         for (name, val) in fields {
             writer.write(name, val);
@@ -70,8 +70,8 @@ impl<'a> World<'a> {
         let mut writer = BitWriter::new(&self.schema);
 
         // Seed packet
-        writer.write(&FieldName::SessionId, &sid);
-        writer.write(&FieldName::Sequence, &(seq as u32));
+        writer.write(&FieldName::DevSessionId, &sid);
+        writer.write(&FieldName::DevSequence, &(seq as u32));
 
         // Write and save fields
         for (field_name, _) in self.schema.fields.iter() {
@@ -115,7 +115,7 @@ impl<'a> World<'a> {
             .filter(|(sid_iter, _)| **sid_iter != sid)
             .map(|(sid, player_state)| {
                 let mut writer = BitWriter::new(&self.schema);
-                writer.write(&FieldName::SessionId, sid);
+                writer.write(&FieldName::DevSessionId, sid);
 
                 for (field_name, _) in self.schema.fields.iter() {
                     if let Some(val) = player_state.get(field_name) {
