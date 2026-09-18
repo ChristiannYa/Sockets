@@ -32,9 +32,9 @@ fn main() {
 
             let is_world_empty = world.is_empty();
 
-            let player_spawn_buf = world.player_spawn_buf(sid);
-            net.send_to(&player_spawn_buf, skt_src);
-            net.broadcast(sess.addrs(), &skt_src, &player_spawn_buf);
+            let buf = world.player_spawn_buf(sid);
+            net.send_to(&buf, skt_src);
+            net.broadcast(sess.addrs(), &skt_src, &buf);
 
             if !is_world_empty {
                 net.send_to(&world.sync_buf(sid), skt_src);
