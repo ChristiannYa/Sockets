@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[repr(u8)]
-pub enum PacketKind {
+pub enum DecodeType {
     Single,
     Batch,
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bitp::{
-    FIELD_LENGTHS, PacketKind,
+    DecodeType, FIELD_LENGTHS,
     bits::{BitReader, BitWriter, FieldName, PacketSchema},
     hsv_codec, loc_codec,
 };
@@ -25,7 +25,7 @@ impl<'a> World<'a> {
     }
 
     /// Returns a buffer with information indicating that the player is new.
-    /// Information: [PacketKind]'s `Single`, [FieldName]'s `SessionId` and `IsNewPlayer`
+    /// Information: [DecodeType]'s `Single`, [FieldName]'s `SessionId` and `IsNewPlayer`
     pub fn welcome_buf(&self, sid: u32) -> Vec<u8> {
         self.pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
     }
@@ -61,7 +61,7 @@ impl<'a> World<'a> {
             writer.write(name, val);
         }
 
-        let mut buf = vec![PacketKind::Single as u8];
+        let mut buf = vec![DecodeType::Single as u8];
         buf.extend(writer.buf());
         buf
     }
@@ -90,7 +90,7 @@ impl<'a> World<'a> {
             println!("#{sid}: {field_name:?}={val}");
         }
 
-        let mut buf = vec![PacketKind::Single as u8];
+        let mut buf = vec![DecodeType::Single as u8];
         buf.extend(writer.buf());
         buf
     }
@@ -131,7 +131,7 @@ impl<'a> World<'a> {
             })
             .collect();
 
-        let mut buf_sync = vec![PacketKind::Batch as u8, records.len() as u8];
+        let mut buf_sync = vec![DecodeType::Batch as u8, records.len() as u8];
         for record in records {
             buf_sync.push(record.len() as u8);
             buf_sync.extend(record);

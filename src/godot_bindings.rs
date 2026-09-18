@@ -1,5 +1,5 @@
 use crate::{
-    FIELD_LENGTHS, PacketKind,
+    DecodeType, FIELD_LENGTHS,
     bits::{BitReader, BitWriter, PacketSchema},
     hsv_codec, loc_codec,
 };
@@ -19,9 +19,10 @@ struct NetPacketCodec {
 #[godot_api]
 impl NetPacketCodec {
     #[constant]
-    const PACKET_KIND_SINGLE: u8 = PacketKind::Single as u8;
+    const DEC_SINGLE: u8 = DecodeType::Single as u8;
+
     #[constant]
-    const PACKET_KIND_BATCH: u8 = PacketKind::Batch as u8;
+    const DEC_BATCH: u8 = DecodeType::Batch as u8;
 
     #[func]
     fn create() -> Gd<Self> {
