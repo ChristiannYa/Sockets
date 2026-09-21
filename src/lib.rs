@@ -11,9 +11,3 @@ pub enum PacketType {
     Data,
     Ack,
 }
-
-#[repr(u8)]
-pub enum DecodeType {
-    Single,
-    Batch,
-}

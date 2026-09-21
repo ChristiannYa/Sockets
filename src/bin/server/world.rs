@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use bitp::{
-    DecodeType,
-    bits::{BitReader, BitWriter, PacketSchema},
+    bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     fields::{FIELD_LENGTHS, FieldName},
     quantize::{hsv::hsv_codec, loc::loc_codec},
 };

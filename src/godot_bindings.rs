@@ -1,6 +1,5 @@
 use crate::{
-    DecodeType,
-    bits::{BitReader, BitWriter, PacketSchema},
+    bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     fields::FIELD_LENGTHS,
     quantize::{hsv::hsv_codec, loc::loc_codec},
 };
