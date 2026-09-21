@@ -6,7 +6,7 @@ use std::{
 };
 
 use bitp::{
-    bits::{BitReader, BitWriter, schema::PacketSchema},
+    bits::{BitReader, BitWriter, PacketSchema},
     fields::{lengths::FIELD_LENGTHS, names::FieldName},
 };
 

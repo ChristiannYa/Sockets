@@ -1,7 +1,7 @@
 use tap::Pipe;
 
 use crate::{
-    bits::{schema::PacketSchema, shared::BufferProgress},
+    bits::{PacketSchema, codec::prog::BufferProgress},
     fields::names::FieldName,
     util::mask,
 };
@@ -89,7 +89,7 @@ mod tests {
         schema: &PacketSchema,
         field_values: &[(FieldName, u32)],
     ) -> Result<(), String> {
-        let mut writer = BitWriter::new(&schema);
+        let mut writer = BitWriter::new(schema);
 
         let mut bits_written_test = String::from("");
         for (field_name, field_val) in field_values.iter() {
@@ -112,7 +112,7 @@ mod tests {
         log::debug!("bits_written (test): {bits_written_test}");
 
         let buf = writer.buf();
-        let mut reader = BitReader::new(&schema, &buf);
+        let mut reader = BitReader::new(schema, &buf);
 
         let field_reads: Vec<(FieldName, u32)> = field_values
             .iter()

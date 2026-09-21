@@ -1,7 +1,6 @@
-mod reader;
-pub mod schema;
-mod shared;
-mod writer;
+mod codec;
+mod schema;
 
-pub use reader::BitReader;
-pub use writer::BitWriter;
+pub use codec::reader::BitReader;
+pub use codec::writer::BitWriter;
+pub use schema::PacketSchema;

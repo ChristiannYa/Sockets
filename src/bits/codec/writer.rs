@@ -1,7 +1,7 @@
 use tap::Pipe;
 
 use crate::{
-    bits::{schema::PacketSchema, shared::BufferProgress},
+    bits::{codec::prog::BufferProgress, schema::PacketSchema},
     fields::names::FieldName,
     util::mask,
 };
