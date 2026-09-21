@@ -54,6 +54,7 @@ pub enum FieldName {
     DevSessionId,
     DevSequence,
     DevPing,
+    DevPacketId,
     DevIsNewPlayer,
     IsJumping,
     IsPremium,

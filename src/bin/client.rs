@@ -6,13 +6,13 @@ use std::{
 };
 
 use bitp::{
-    FIELD_LENGTHS,
     bits::{BitReader, BitWriter, FieldName, PacketSchema},
+    consts::schema::SCHEMA_FIELDS,
 };
 
 fn main() {
     let skt = UdpSocket::bind("0.0.0.0:0").expect("Couldn't bind");
-    let pkt_schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+    let pkt_schema = PacketSchema::build(SCHEMA_FIELDS).unwrap();
 
     let (tx_ev, rx_ev) = mpsc::channel::<Event>();
     let tx_ev_1 = tx_ev.clone();
@@ -23,9 +23,7 @@ fn main() {
     thread::spawn(move || {
         let mut buf = [0; 1024];
         loop {
-            let (skt_src_buflen, _) = skt_recv
-                .recv_from(&mut buf)
-                .expect("Didn't receive data");
+            let (skt_src_buflen, _) = skt_recv.recv_from(&mut buf).expect("Didn't receive data");
             let buf = &buf[..skt_src_buflen];
 
             let mut reader = BitReader::new(&pkt_schema_recv, buf);

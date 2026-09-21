@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use bitp::{
-    DecodeType, FIELD_LENGTHS,
+    DecodeType,
     bits::{BitReader, BitWriter, FieldName, PacketSchema},
-    hsv_codec, loc_codec,
+    consts::schema::SCHEMA_FIELDS,
+    quantize::{hsv::hsv_codec, loc::loc_codec},
 };
 
 pub mod logic;
@@ -17,7 +18,7 @@ pub struct World<'a> {
 
 impl<'a> World<'a> {
     pub fn new() -> Self {
-        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+        let schema = PacketSchema::build(SCHEMA_FIELDS).unwrap();
         World {
             schema,
             state: State::new(),
