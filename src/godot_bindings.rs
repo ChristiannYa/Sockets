@@ -1,7 +1,7 @@
 use crate::{
     DecodeType,
     bits::{BitReader, BitWriter, PacketSchema},
-    fields::lengths::FIELD_LENGTHS,
+    fields::FIELD_LENGTHS,
     quantize::{hsv::hsv_codec, loc::loc_codec},
 };
 use godot::prelude::*;

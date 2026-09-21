@@ -1,4 +1,4 @@
-use crate::fields::names::FieldName;
+use crate::fields::FieldName;
 
 pub struct FieldInfo {
     pub ind: usize,

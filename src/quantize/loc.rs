@@ -1,4 +1,4 @@
-use crate::{bits::PacketSchema, fields::names::FieldName, quantize::fixed_pt::FixedPoint};
+use crate::{bits::PacketSchema, fields::FieldName, quantize::fixed_pt::FixedPoint};
 
 pub struct LocCodec {
     pub x: FixedPoint,

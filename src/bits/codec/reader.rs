@@ -2,7 +2,7 @@ use tap::Pipe;
 
 use crate::{
     bits::{PacketSchema, codec::prog::BufferProgress},
-    fields::names::FieldName,
+    fields::FieldName,
     util::mask,
 };
 
@@ -82,7 +82,7 @@ mod tests {
 
     use crate::{
         bits::{BitReader, BitWriter, schema::PacketSchema},
-        fields::names::FieldName,
+        fields::FieldName,
     };
 
     fn t_reads_match(

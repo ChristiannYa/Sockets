@@ -2,7 +2,7 @@ use tap::Pipe;
 
 use crate::{
     bits::{codec::prog::BufferProgress, schema::PacketSchema},
-    fields::names::FieldName,
+    fields::FieldName,
     util::mask,
 };
 
@@ -84,7 +84,7 @@ mod tests {
 
     use crate::{
         bits::{BitReader, BitWriter, schema::PacketSchema},
-        fields::names::FieldName,
+        fields::FieldName,
         util::split_into_bytes,
     };
 
