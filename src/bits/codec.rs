@@ -7,3 +7,9 @@ pub enum DecodeType {
     Single,
     Batch,
 }
+
+#[repr(u8)]
+pub enum PacketType {
+    Data,
+    Ack,
+}

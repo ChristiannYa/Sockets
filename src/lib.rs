@@ -5,9 +5,3 @@ pub mod util;
 
 #[cfg(feature = "godot")]
 pub mod godot_bindings;
-
-#[repr(u8)]
-pub enum PacketType {
-    Data,
-    Ack,
-}
