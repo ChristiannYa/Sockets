@@ -1,7 +1,8 @@
 use tap::Pipe;
 
 use crate::{
-    bits::{FieldName, PacketSchema, shared::BufferProgress},
+    bits::{schema::PacketSchema, shared::BufferProgress},
+    fields::names::FieldName,
     util::mask,
 };
 
@@ -79,7 +80,10 @@ impl<'a> BitReader<'a> {
 mod tests {
     use tap::{Pipe, Tap};
 
-    use crate::bits::{BitReader, BitWriter, FieldName, PacketSchema};
+    use crate::{
+        bits::{BitReader, BitWriter, schema::PacketSchema},
+        fields::names::FieldName,
+    };
 
     fn t_reads_match(
         schema: &PacketSchema,

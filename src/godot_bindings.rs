@@ -1,7 +1,7 @@
 use crate::{
     DecodeType,
-    bits::{BitReader, BitWriter, PacketSchema},
-    consts::schema::SCHEMA_FIELDS,
+    bits::{BitReader, BitWriter, schema::PacketSchema},
+    fields::lengths::FIELD_LENGTHS,
     quantize::{hsv::hsv_codec, loc::loc_codec},
 };
 use godot::prelude::*;
@@ -27,7 +27,7 @@ impl NetPacketCodec {
 
     #[func]
     fn create() -> Gd<Self> {
-        let schema = PacketSchema::build(SCHEMA_FIELDS).unwrap();
+        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
         Gd::from_init_fn(|_base| Self { schema })
     }
 

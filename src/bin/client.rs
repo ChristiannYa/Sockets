@@ -6,13 +6,13 @@ use std::{
 };
 
 use bitp::{
-    bits::{BitReader, BitWriter, FieldName, PacketSchema},
-    consts::schema::SCHEMA_FIELDS,
+    bits::{BitReader, BitWriter, schema::PacketSchema},
+    fields::{lengths::FIELD_LENGTHS, names::FieldName},
 };
 
 fn main() {
     let skt = UdpSocket::bind("0.0.0.0:0").expect("Couldn't bind");
-    let pkt_schema = PacketSchema::build(SCHEMA_FIELDS).unwrap();
+    let pkt_schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
 
     let (tx_ev, rx_ev) = mpsc::channel::<Event>();
     let tx_ev_1 = tx_ev.clone();

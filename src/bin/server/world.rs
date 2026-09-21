@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use bitp::{
     DecodeType,
-    bits::{BitReader, BitWriter, FieldName, PacketSchema},
-    consts::schema::SCHEMA_FIELDS,
+    bits::{BitReader, BitWriter, schema::PacketSchema},
+    fields::{lengths::FIELD_LENGTHS, names::FieldName},
     quantize::{hsv::hsv_codec, loc::loc_codec},
 };
 
@@ -18,7 +18,7 @@ pub struct World<'a> {
 
 impl<'a> World<'a> {
     pub fn new() -> Self {
-        let schema = PacketSchema::build(SCHEMA_FIELDS).unwrap();
+        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
         World {
             schema,
             state: State::new(),

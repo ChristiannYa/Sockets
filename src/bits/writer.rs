@@ -1,7 +1,8 @@
 use tap::Pipe;
 
 use crate::{
-    bits::{FieldName, PacketSchema, shared::BufferProgress},
+    bits::{schema::PacketSchema, shared::BufferProgress},
+    fields::names::FieldName,
     util::mask,
 };
 
@@ -82,7 +83,8 @@ mod tests {
     use tap::{Pipe, Tap};
 
     use crate::{
-        bits::{BitReader, BitWriter, FieldName, PacketSchema},
+        bits::{BitReader, BitWriter, schema::PacketSchema},
+        fields::names::FieldName,
         util::split_into_bytes,
     };
 

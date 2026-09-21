@@ -1,6 +1,5 @@
 use crate::{
-    bits::{FieldName, PacketSchema},
-    quantize::fixed_pt::FixedPoint,
+    bits::schema::PacketSchema, fields::names::FieldName, quantize::fixed_pt::FixedPoint,
     util::mask,
 };
 

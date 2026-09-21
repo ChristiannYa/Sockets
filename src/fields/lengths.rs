@@ -1,6 +1,6 @@
-use crate::bits::{self, FieldName};
+use crate::fields::names::FieldName;
 
-pub static SCHEMA_FIELDS: &[(bits::FieldName, usize)] = &[
+pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::DevSessionId, 6),
     (FieldName::DevSequence, 8),
     (FieldName::DevPacketId, 8),

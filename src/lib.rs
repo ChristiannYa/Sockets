@@ -1,5 +1,5 @@
 pub mod bits;
-pub mod consts;
+pub mod fields;
 pub mod quantize;
 pub mod util;
 
