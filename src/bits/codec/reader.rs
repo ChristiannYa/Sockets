@@ -1,9 +1,8 @@
 use tap::Pipe;
 
 use crate::{
-    bits::{PacketSchema, codec::prog::BufferProgress},
+    bits::{PacketSchema, codec::prog::BufferProgress, utils::mask},
     fields::FieldName,
-    util::mask,
 };
 
 pub struct BitReader<'a> {

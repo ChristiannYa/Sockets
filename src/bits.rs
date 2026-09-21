@@ -1,6 +1,8 @@
 mod codec;
 mod schema;
 
+pub mod utils;
+
 pub use codec::DecodeType;
 pub use codec::reader::BitReader;
 pub use codec::writer::BitWriter;

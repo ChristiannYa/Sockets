@@ -1,4 +1,8 @@
-use crate::{bits::PacketSchema, fields::FieldName, quantize::fixed_pt::FixedPoint, util::mask};
+use crate::{
+    bits::{PacketSchema, utils::mask},
+    fields::FieldName,
+    quantize::fixed_pt::FixedPoint,
+};
 
 pub struct HsvCodec {
     pub h: FixedPoint,

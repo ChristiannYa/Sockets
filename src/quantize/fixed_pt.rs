@@ -1,4 +1,4 @@
-use crate::util::mask;
+use crate::bits::utils::mask;
 
 pub struct FixedPoint {
     pub step: f32,

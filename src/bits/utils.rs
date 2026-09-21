@@ -1,4 +1,6 @@
-pub fn mask(bits_len: &usize) -> u32 { (1 << bits_len) - 1 }
+pub fn mask(bits_len: &usize) -> u32 {
+    (1 << bits_len) - 1
+}
 
 pub fn split_into_bytes(s: &str) -> String {
     let len = s.len();
