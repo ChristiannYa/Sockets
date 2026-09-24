@@ -13,7 +13,7 @@ unsafe impl ExtensionLibrary for BitpExtension {}
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
 struct NetPacketCodec {
-    schema: PacketSchema<'static>,
+    schema: PacketSchema,
 }
 
 #[godot_api]

@@ -1,41 +1,46 @@
-use std::collections::HashMap;
+pub mod logic;
 
+use crate::codec::Codec;
 use bitp::{
-    bits::{BitReader, BitWriter, DecodeType, PacketSchema},
-    fields::{FIELD_LENGTHS, FieldName},
+    bits::{BitReader, BitWriter, DecodeType},
+    fields::FieldName,
     quantize::{hsv::hsv_codec, loc::loc_codec},
 };
-
-pub mod logic;
+use std::collections::HashMap;
 
 type WorldState = HashMap<u32, HashMap<FieldName, u32>>;
 
-pub struct World<'a> {
-    schema: PacketSchema<'a>,
+pub struct World<'c> {
     state: State,
+    codec: &'c Codec,
 }
 
-impl<'a> World<'a> {
-    pub fn new() -> Self {
-        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+impl<'c> World<'c> {
+    pub fn new(codec: &'c Codec) -> Self {
         World {
-            schema,
             state: State::new(),
+            codec,
         }
     }
 
     /// Returns a buffer with information indicating that the player is new.
     /// Information: [DecodeType]'s `Single`, [FieldName]'s `SessionId` and `IsNewPlayer`
     pub fn welcome_buf(&self, sid: u32) -> Vec<u8> {
-        self.pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
+        self.codec.pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
     }
 
     /// Returns a buffer with spawn information
     /// - X and Z location of the player
     /// - HSV color of the player
     pub fn player_spawn_buf(&mut self, sid: u32) -> Vec<u8> {
-        let (spawn_pt, spawn_pt_codec) = (logic::spawn::player_spawn_pt(), loc_codec(&self.schema));
-        let (hsv, hsv_codec) = (logic::color::hsv(), hsv_codec(&self.schema));
+        let (spawn_pt, spawn_pt_codec) = (
+            logic::spawn::player_spawn_pt(),
+            loc_codec(self.codec.schema()),
+        );
+        let (hsv, hsv_codec) = (
+            logic::color::hsv(), //
+            hsv_codec(self.codec.schema()),
+        );
 
         let fields = [
             (FieldName::LocationX, spawn_pt_codec.x.encode(spawn_pt.x)),
@@ -49,37 +54,14 @@ impl<'a> World<'a> {
             self.state.save(field_name, sid, *val)
         }
 
-        self.pack(&fields, sid)
+        self.codec.pack(&fields, sid)
     }
 
-    /// Pack arbitrary values into a fresh buffer
-    fn pack(&self, fields: &[(FieldName, u32)], sid: u32) -> Vec<u8> {
-        let mut writer = BitWriter::new(&self.schema);
-        writer.write(&FieldName::DevSessionId, &sid);
-
-        for (name, val) in fields {
-            writer.write(name, val);
-        }
-
-        let mut buf = vec![DecodeType::Single as u8];
-        buf.extend(writer.buf());
-        buf
-    }
-
-    /// Reads every field out of `buf`, echoing each one into a new packet seeded
-    /// with `sid` and `seq` for the broadcast.
-    /// Returns the broadcast buffer.
-    pub fn process(&mut self, buf: &[u8], sid: u32, seq: u8) -> Vec<u8> {
-        let mut reader = BitReader::new(&self.schema, buf);
-        let mut writer = BitWriter::new(&self.schema);
-
-        // Seed packet
-        writer.write(&FieldName::DevSessionId, &sid);
-        writer.write(&FieldName::DevSequence, &(seq as u32));
-
-        // Write and save fields
-        for (field_name, _) in self.schema.fields.iter() {
-            if !reader.isset(field_name) {
+    /// Reads every field out of `buf`, echoing each one into a new packet for
+    /// the broadcast buffer
+    pub fn process(&mut self, sid: u32, reader: &mut BitReader, writer: &mut BitWriter) -> Vec<u8> {
+        for (field_name, _) in self.codec.schema().fields.iter() {
+            if !reader.isset(field_name) || *field_name == FieldName::DevPacketId {
                 continue;
             };
 
@@ -118,10 +100,10 @@ impl<'a> World<'a> {
             .iter()
             .filter(|(sid_iter, _)| **sid_iter != sid)
             .map(|(sid, player_state)| {
-                let mut writer = BitWriter::new(&self.schema);
+                let mut writer = self.codec.writer();
                 writer.write(&FieldName::DevSessionId, sid);
 
-                for (field_name, _) in self.schema.fields.iter() {
+                for (field_name, _) in self.codec.schema().fields.iter() {
                     if let Some(val) = player_state.get(field_name) {
                         writer.write(field_name, val);
                     }
@@ -139,12 +121,8 @@ impl<'a> World<'a> {
         buf_sync
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.state.world.is_empty()
-    }
-
-    pub fn schema_min_len(&self) -> usize {
-        self.schema.fields.len().div_ceil(8)
+    pub fn has_state(&self) -> bool {
+        !self.state.world.is_empty()
     }
 }
 

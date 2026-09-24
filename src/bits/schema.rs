@@ -6,12 +6,12 @@ pub struct FieldInfo {
 }
 
 #[derive(Clone)]
-pub struct PacketSchema<'a> {
-    pub fields: &'a [(FieldName, usize)],
+pub struct PacketSchema {
+    pub fields: &'static [(FieldName, usize)],
 }
 
-impl<'a> PacketSchema<'a> {
-    pub fn build(fields: &'a [(FieldName, usize)]) -> Result<Self, String> {
+impl PacketSchema {
+    pub fn build(fields: &'static [(FieldName, usize)]) -> Result<Self, String> {
         for (field_name, field_len) in fields {
             let reason =
                 |msg: &str| -> String { format!("Field '{:?}' is invalid: {msg}", field_name) };

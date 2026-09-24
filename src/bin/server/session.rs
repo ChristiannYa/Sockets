@@ -15,7 +15,7 @@ impl Session {
         }
     }
 
-    pub fn sid_or_reg(&mut self, skt_src: &SocketAddr) -> u32 {
+    pub fn sid(&mut self, skt_src: &SocketAddr) -> u32 {
         *self.clis.entry(*skt_src).or_insert_with(|| {
             let next = self.next;
             self.next += 1;

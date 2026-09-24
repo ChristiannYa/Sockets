@@ -5,15 +5,15 @@ use crate::{
     fields::FieldName,
 };
 
-pub struct BitReader<'a> {
-    packet_schema: &'a PacketSchema<'a>,
-    buf: &'a [u8],
-    buf_mask: &'a [u8],
+pub struct BitReader<'s, 'b> {
+    packet_schema: &'s PacketSchema,
+    buf: &'b [u8],
+    buf_mask: &'b [u8],
     bits_acc: usize,
 }
 
-impl<'a> BitReader<'a> {
-    pub fn new(packet_schema: &'a PacketSchema, buf: &'a [u8]) -> Self {
+impl<'s, 'b> BitReader<'s, 'b> {
+    pub fn new(packet_schema: &'s PacketSchema, buf: &'b [u8]) -> Self {
         let (buf_mask, buf) = Self::split_buf(packet_schema.fields, buf);
         BitReader {
             packet_schema,
@@ -23,7 +23,7 @@ impl<'a> BitReader<'a> {
         }
     }
 
-    fn split_buf(field_schemas: &'a [(FieldName, usize)], buf: &'a [u8]) -> (&'a [u8], &'a [u8]) {
+    fn split_buf(field_schemas: &'s [(FieldName, usize)], buf: &'b [u8]) -> (&'b [u8], &'b [u8]) {
         field_schemas
             .len()
             .div_ceil(8)

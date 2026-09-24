@@ -5,15 +5,15 @@ use crate::{
     fields::FieldName,
 };
 
-pub struct BitWriter<'a> {
-    packet_schema: &'a PacketSchema<'a>,
+pub struct BitWriter<'s> {
+    packet_schema: &'s PacketSchema,
     buf: Vec<u8>,
     buf_mask: Vec<u8>,
     bits_acc: usize,
 }
 
-impl<'a> BitWriter<'a> {
-    pub fn new(packet_schema: &'a PacketSchema) -> Self {
+impl<'s> BitWriter<'s> {
+    pub fn new(packet_schema: &'s PacketSchema) -> Self {
         let buf_mask: Vec<u8> = packet_schema
             .fields
             .len()

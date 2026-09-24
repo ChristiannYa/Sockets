@@ -11,9 +11,8 @@ impl Net {
         Net { skt }
     }
 
-    /// Returns (number of bytes read, origin)
-    pub fn recv_from(&self, buf: &mut [u8]) -> (usize, SocketAddr) {
-        self.skt.recv_from(buf).expect("Didn't receive data")
+    pub fn try_clone_skt(&self) -> UdpSocket {
+        self.skt.try_clone().expect("Couldn't clone socket")
     }
 
     /// Sends data on the socket to the given address
