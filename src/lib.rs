@@ -5,4 +5,4 @@ pub mod rel;
 pub mod util;
 
 #[cfg(feature = "godot")]
-pub mod godot_bindings;
+pub mod godot;

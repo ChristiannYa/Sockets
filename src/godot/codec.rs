@@ -2,37 +2,48 @@ use crate::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     fields::FIELD_LENGTHS,
     quantize::{hsv::hsv_codec, loc::loc_codec},
+    rel::ack::PacketType,
 };
-use godot::prelude::*;
-
-struct BitpExtension;
-
-#[gdextension]
-unsafe impl ExtensionLibrary for BitpExtension {}
+use godot::{
+    meta::ToGodot,
+    prelude::{
+        Color, Gd, GodotClass, PackedByteArray, VarArray, VarDictionary, Vector3, godot_api,
+    },
+};
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
-struct NetPacketCodec {
+pub struct Codec {
     schema: PacketSchema,
 }
 
 #[godot_api]
-impl NetPacketCodec {
+impl Codec {
+    #[constant]
+    const PKT_DATA: u8 = PacketType::Data as u8;
+    #[constant]
+    const PKT_ACK: u8 = PacketType::Ack as u8;
+
     #[constant]
     const DEC_SINGLE: u8 = DecodeType::Single as u8;
-
     #[constant]
     const DEC_BATCH: u8 = DecodeType::Batch as u8;
 
     #[func]
     fn create() -> Gd<Self> {
         let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
-        Gd::from_init_fn(|_base| Self { schema })
+        Gd::from_init_fn(|_| Self { schema })
     }
 
     #[func]
     fn decode(&self, buf: PackedByteArray) -> VarDictionary {
-        let mut reader = BitReader::new(&self.schema, buf.as_slice());
+        // Strip [PacketType, DecodeType] — caller has already branched on
+        // these to know this is a Data/Single packet before calling decode.
+        let Some(body) = buf.as_slice().get(2..) else {
+            return VarDictionary::new(); // too short to even hold the header
+        };
+
+        let mut reader = BitReader::new(&self.schema, body);
         let mut dict = VarDictionary::new();
 
         for (field_name, _) in self.schema.fields.iter() {
@@ -46,8 +57,12 @@ impl NetPacketCodec {
 
     #[func]
     fn decode_batch(&self, buf: PackedByteArray) -> VarArray {
-        let bytes: &[u8] = buf.as_slice();
         let mut buf_out = VarArray::new();
+
+        // Strip [PacketType, DecodeType] before the record-count byte
+        let Some(bytes) = buf.as_slice().get(2..) else {
+            return buf_out;
+        };
 
         let Some((&record_count, mut records)) = bytes.split_first() else {
             return buf_out; // Empty packet, nothing to decode
@@ -55,23 +70,16 @@ impl NetPacketCodec {
 
         for _ in 0..record_count {
             let Some((&record_len, rem)) = records.split_first() else {
-                // Truncated: packet is shorter than what its own header claims
                 break;
             };
             let record_len = record_len as usize;
             if rem.len() < record_len {
-                // Truncated: declared record_len overruns the buffer.
-                // Without this check, next's `.split_at()` call (to split the
-                // record's actual data and the remaining records) would
-                // panic with index out of bounds
                 break;
             }
 
             let (buf, rem) = rem.split_at(record_len);
             records = rem;
 
-            // We could do `self.decode(buf.into())`, but that would build a fresh
-            // `PackedByteArray` per record, causing a small heap allocation
             let mut reader = BitReader::new(&self.schema, buf);
             let mut dict = VarDictionary::new();
             for (field_name, _) in self.schema.fields.iter() {
@@ -112,6 +120,8 @@ impl NetPacketCodec {
             }
         }
 
-        PackedByteArray::from(writer.buf().as_slice())
+        let mut buf = vec![PacketType::Data as u8, DecodeType::Single as u8];
+        buf.extend(writer.buf());
+        PackedByteArray::from(buf.as_slice())
     }
 }
