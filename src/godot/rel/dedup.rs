@@ -4,12 +4,12 @@ use std::time::Instant;
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
-pub struct Dedup {
+pub struct UdpDedup {
     ids: SeenPacketIds,
 }
 
 #[godot_api]
-impl Dedup {
+impl UdpDedup {
     #[func]
     fn create() -> Gd<Self> {
         Gd::from_init_fn(|_| Self {

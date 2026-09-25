@@ -8,13 +8,13 @@ type PendingPackets = HashMap<u8, PendingPacket>;
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
-pub struct Pending {
+pub struct UdpPending {
     pkts: PendingPackets,
     next_id: u8,
 }
 
 #[godot_api]
-impl Pending {
+impl UdpPending {
     #[func]
     fn create() -> Gd<Self> {
         Gd::from_init_fn(|_| Self {

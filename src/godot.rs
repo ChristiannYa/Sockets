@@ -1,6 +1,5 @@
 mod codec;
-mod dedup;
-mod pending;
+mod rel;
 
 use godot::prelude::{ExtensionLibrary, gdextension};
 

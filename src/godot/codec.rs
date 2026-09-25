@@ -13,12 +13,12 @@ use godot::{
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
-pub struct Codec {
+pub struct UdpCodec {
     schema: PacketSchema,
 }
 
 #[godot_api]
-impl Codec {
+impl UdpCodec {
     #[constant]
     const PKT_DATA: u8 = PacketType::Data as u8;
     #[constant]
