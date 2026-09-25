@@ -103,6 +103,8 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
 
     // Capture client newness before potential registration
     let is_new_cli = ctx.sess.is_new_cli(&skt_src);
+    println!("is_new_cli: {is_new_cli}");
+
     let sid = ctx.sess.sid(&skt_src);
 
     if is_new_cli {
@@ -111,6 +113,7 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
         // Capture world state before spawning player and saving its state in
         // the world/session
         let is_world_stateful = ctx.world.has_state();
+        println!("is_world_stateful: {is_world_stateful}");
 
         let buf = ctx.world.player_spawn_buf(sid);
         ctx.net.send_to(&buf, skt_src);
@@ -128,6 +131,8 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
     let buf = ctx.world.process(sid, &mut reader, &mut writer);
 
     if let Some((pkt_id_in, _)) = pkt_io_ids {
+        println!("pkt_io_ids: IS_SOME");
+
         ctx.net.send_to(&bitp::rel::ack::encode(pkt_id_in), skt_src);
 
         if ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in) {
@@ -136,6 +141,8 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
 
         ctx.addrs_seen_pkt_ids
             .mark_seen(&skt_src, pkt_id_in, Instant::now());
+    } else {
+        println!("pkt_io_ids: IS_NONE");
     }
 
     match pkt_io_ids {
