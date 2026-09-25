@@ -4,7 +4,6 @@ use bitp::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     fields::{FIELD_LENGTHS, FieldName},
 };
-use tap::Pipe;
 
 pub struct Codec {
     schema: PacketSchema,
