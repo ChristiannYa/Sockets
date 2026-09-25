@@ -3,6 +3,7 @@ use std::cell::Cell;
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     fields::{FIELD_LENGTHS, FieldName},
+    rel::ack::PacketType,
 };
 
 pub struct Codec {
@@ -38,18 +39,28 @@ impl Codec {
         id
     }
 
-    /// Pack arbitrary field values into a fresh buffer
-    pub fn pack(&self, fields: &[(FieldName, u32)], sid: u32) -> Vec<u8> {
+    /// Returns the 2-byte `[PacketType:: Data, decode_type]` header
+    pub fn header_buf(&self, decode_type: DecodeType) -> Vec<u8> {
+        vec![PacketType::Data as u8, decode_type as u8]
+    }
+
+    /// For packing schema related values and with the header prepended.
+    pub fn headful_pack(&self, fields: &[(FieldName, u32)], sid: u32) -> Vec<u8> {
+        let mut buf = self.header_buf(DecodeType::Single);
+        buf.extend(self.headless_pack(fields, sid));
+        buf
+    }
+
+    /// For packing schema related values.
+    ///
+    /// *Contains `DevSessionId` by default*
+    pub fn headless_pack(&self, fields: &[(FieldName, u32)], sid: u32) -> Vec<u8> {
         let mut writer = self.writer();
         writer.write(&FieldName::DevSessionId, &sid);
-
         for (name, val) in fields {
             writer.write(name, val);
         }
-
-        let mut buf = vec![DecodeType::Single as u8];
-        buf.extend(writer.buf());
-        buf
+        writer.buf()
     }
 
     /// Pre processes a packet by doing the following:

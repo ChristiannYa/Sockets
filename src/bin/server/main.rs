@@ -84,7 +84,10 @@ fn handle_cli_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
             crate::rel::ack::handle_ack(ctx.pending_pkts, id, &skt_src);
         }
         None if buf.first() == Some(&(PacketType::Data as u8)) => {
-            handle_data_pkt(ctx, buf, skt_src);
+            // Strip header bytes because they are not defined in the schema
+            if let Some(buf) = buf.get(2..) {
+                handle_data_pkt(ctx, buf, skt_src);
+            };
         }
         None => {}
     }
@@ -96,14 +99,11 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
     // Protects `BitReader::new()`'s `split_at()` from panicking and
     // taking the whole server down over one client's bad packet.
     if buf.len() < ctx.codec.schema().fields.len().div_ceil(8) {
-        println!("len check pass: FALSE");
         return;
     }
-    println!("len check pass: TRUE");
 
     // Capture client newness before potential registration
     let is_new_cli = ctx.sess.is_new_cli(&skt_src);
-    println!("is_new_cli: {is_new_cli}");
 
     let sid = ctx.sess.sid(&skt_src);
 
@@ -113,7 +113,6 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
         // Capture world state before spawning player and saving its state in
         // the world/session
         let is_world_stateful = ctx.world.has_state();
-        println!("is_world_stateful: {is_world_stateful}");
 
         let buf = ctx.world.player_spawn_buf(sid);
         ctx.net.send_to(&buf, skt_src);
@@ -131,8 +130,6 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
     let buf = ctx.world.process(sid, &mut reader, &mut writer);
 
     if let Some((pkt_id_in, _)) = pkt_io_ids {
-        println!("pkt_io_ids: IS_SOME");
-
         ctx.net.send_to(&bitp::rel::ack::encode(pkt_id_in), skt_src);
 
         if ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in) {
@@ -141,8 +138,6 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
 
         ctx.addrs_seen_pkt_ids
             .mark_seen(&skt_src, pkt_id_in, Instant::now());
-    } else {
-        println!("pkt_io_ids: IS_NONE");
     }
 
     match pkt_io_ids {

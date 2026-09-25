@@ -26,7 +26,8 @@ impl<'c> World<'c> {
     /// Returns a buffer with information indicating that the player is new.
     /// Information: [DecodeType]'s `Single`, [FieldName]'s `SessionId` and `IsNewPlayer`
     pub fn welcome_buf(&self, sid: u32) -> Vec<u8> {
-        self.codec.pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
+        self.codec
+            .headful_pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
     }
 
     /// Returns a buffer with spawn information
@@ -54,7 +55,7 @@ impl<'c> World<'c> {
             self.state.save(field_name, sid, *val)
         }
 
-        self.codec.pack(&fields, sid)
+        self.codec.headful_pack(&fields, sid)
     }
 
     /// Reads every field out of `buf`, echoing each one into a new packet for
@@ -72,7 +73,7 @@ impl<'c> World<'c> {
             println!("#{sid}: {field_name:?}={val}");
         }
 
-        let mut buf = vec![DecodeType::Single as u8];
+        let mut buf = self.codec.header_buf(DecodeType::Single);
         buf.extend(writer.buf());
         buf
     }
@@ -100,25 +101,27 @@ impl<'c> World<'c> {
             .iter()
             .filter(|(sid_iter, _)| **sid_iter != sid)
             .map(|(sid, player_state)| {
-                let mut writer = self.codec.writer();
-                writer.write(&FieldName::DevSessionId, sid);
+                let mut fields = Vec::<(FieldName, u32)>::new();
 
                 for (field_name, _) in self.codec.schema().fields.iter() {
                     if let Some(val) = player_state.get(field_name) {
-                        writer.write(field_name, val);
+                        fields.push((field_name.clone(), *val));
                     }
                 }
 
-                writer.buf()
+                self.codec.headless_pack(&fields, *sid)
             })
             .collect();
 
-        let mut buf_sync = vec![DecodeType::Batch as u8, records.len() as u8];
+        let mut buf = self.codec.header_buf(DecodeType::Batch);
+
+        buf.push(records.len() as u8);
         for record in records {
-            buf_sync.push(record.len() as u8);
-            buf_sync.extend(record);
+            buf.push(record.len() as u8);
+            buf.extend(record);
         }
-        buf_sync
+
+        buf
     }
 
     pub fn has_state(&self) -> bool {
