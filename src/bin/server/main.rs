@@ -96,8 +96,10 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
     // Protects `BitReader::new()`'s `split_at()` from panicking and
     // taking the whole server down over one client's bad packet.
     if buf.len() < ctx.codec.schema().fields.len().div_ceil(8) {
+        println!("len check pass: FALSE");
         return;
     }
+    println!("len check pass: TRUE");
 
     // Capture client newness before potential registration
     let is_new_cli = ctx.sess.is_new_cli(&skt_src);
