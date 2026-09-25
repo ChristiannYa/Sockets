@@ -119,13 +119,13 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
         }
     }
 
-    let (pkt_ids, mut reader, mut writer) =
+    let (pkt_io_ids, mut reader, mut writer) =
         ctx.codec
             .preprocess_pkt(buf, sid, ctx.sess.next_seq(&skt_src));
 
     let buf = ctx.world.process(sid, &mut reader, &mut writer);
 
-    if let Some((pkt_id_in, _)) = pkt_ids {
+    if let Some((pkt_id_in, _)) = pkt_io_ids {
         ctx.net.send_to(&bitp::rel::ack::encode(pkt_id_in), skt_src);
 
         if ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in) {
@@ -136,7 +136,7 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
             .mark_seen(&skt_src, pkt_id_in, Instant::now());
     }
 
-    match pkt_ids {
+    match pkt_io_ids {
         Some((_, pkt_id_out)) => {
             let now = Instant::now();
             for addr in ctx.sess.addrs() {

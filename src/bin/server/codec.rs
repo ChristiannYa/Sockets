@@ -55,11 +55,12 @@ impl Codec {
 
     /// Pre processes a packet by doing the following:
     ///
-    /// - Seeding packet with the session id and the sequence
-    /// - Checking if it has an id
+    /// - Checking if the packet is reliable
+    /// - Seeding packet with the session id (unconditionally) and the sequence
+    ///   (unless the packet is reliable)
     ///
-    /// Returns the optional packet ids (in and out) and the (reader, writer)
-    /// pair which already read the packet in order to avoid any further
+    /// Returns the optional packet ids (in and out), reader, and writer
+    /// which already read the packet in order to avoid any further
     /// redundant packet re-reads.
     pub fn preprocess_pkt<'b>(
         &self,
@@ -69,22 +70,25 @@ impl Codec {
     ) -> (Option<(u8, u8)>, BitReader<'_, 'b>, BitWriter<'_>) {
         let (mut reader, mut writer) = (self.reader(buf), self.writer());
 
-        // Seed packet
-        writer.write(&FieldName::DevSessionId, &sid);
-        writer.write(&FieldName::DevSequence, &(seq as u32));
-
-        // Check for packet id
-        let ids = reader
+        let pkt_io_ids = reader
             .isset(&FieldName::DevPacketId)
             .then(|| reader.read(&FieldName::DevPacketId) as u8)
-            .map(|id| (id, self.next_pkt_id()))
-            .pipe(|ids| {
-                if let Some((_, out_id)) = ids {
-                    writer.write(&FieldName::DevPacketId, &(out_id as u32));
-                }
-                ids
-            });
+            .map(|id| (id, self.next_pkt_id()));
 
-        (ids, reader, writer)
+        self.seed_pkt(&mut writer, sid, seq, pkt_io_ids);
+
+        (pkt_io_ids, reader, writer)
+    }
+
+    fn seed_pkt(&self, writer: &mut BitWriter, sid: u32, seq: u8, pkt_io_ids: Option<(u8, u8)>) {
+        writer.write(&FieldName::DevSessionId, &sid);
+
+        if pkt_io_ids.is_none() {
+            writer.write(&FieldName::DevSequence, &(seq as u32))
+        }
+
+        if let Some((_, id_out)) = pkt_io_ids {
+            writer.write(&FieldName::DevPacketId, &(id_out as u32));
+        }
     }
 }
