@@ -147,6 +147,7 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
                 if *addr == skt_src {
                     continue;
                 }
+                println!("broadcast id={pkt_id_out} to {addr}");
                 ctx.net.send_to(&buf, *addr);
                 ctx.pending_pkts.insert(
                     (pkt_id_out, *addr),
