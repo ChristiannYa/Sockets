@@ -129,10 +129,13 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
 
     let buf = ctx.world.process(sid, &mut reader, &mut writer);
 
-    if let Some((pkt_id_in, _)) = pkt_io_ids {
+    if let Some((pkt_id_in, pkt_id_out)) = pkt_io_ids {
+        let seen = ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in);
+        println!("id_in={pkt_id_in}, id_out={pkt_id_out} seen={seen}");
+
         ctx.net.send_to(&bitp::rel::ack::encode(pkt_id_in), skt_src);
 
-        if ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in) {
+        if seen {
             return;
         }
 
