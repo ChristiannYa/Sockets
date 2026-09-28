@@ -79,34 +79,15 @@ impl Codec {
         writer.buf()
     }
 
-    /// Pre processes a packet by doing the following:
-    ///
-    /// - Checking if the packet is reliable
-    /// - Seeding packet with the session id (unconditionally) and the sequence
-    ///   (unless the packet is reliable)
-    ///
-    /// Returns the optional packet ids (in and out), reader, and writer
-    /// which already read the packet in order to avoid any further
-    /// redundant packet re-reads.
-    pub fn preprocess_pkt<'b>(
-        &self,
-        buf: &'b [u8],
-        sid: u32,
-        seq: u8,
-    ) -> ((Option<u8>, Option<u8>), BitReader<'_, 'b>, BitWriter<'_>) {
-        let (mut reader, mut writer) = (self.reader(buf), self.writer());
-
-        let id_in = reader
+    pub fn pkt_ioids(&self, reader: &mut BitReader) -> (Option<u8>, Option<u8>) {
+        let inid = reader
             .isset(&FieldName::DevPacketId)
             .then(|| reader.read(&FieldName::DevPacketId) as u8);
-        let id_out = id_in.map(|_| self.next_pkt_id());
-
-        self.seed_pkt(&mut writer, sid, id_out.map_or(Rel::Seq(seq), Rel::Id));
-
-        ((id_in, id_out), reader, writer)
+        let outid = inid.map(|_| self.next_pkt_id());
+        (inid, outid)
     }
 
-    fn seed_pkt(&self, writer: &mut BitWriter, sid: u32, rel: Rel) {
+    pub fn seed_pkt(&self, writer: &mut BitWriter, sid: u32, rel: Rel) {
         writer.write(&FieldName::DevSessionId, &sid);
         match rel {
             Rel::Seq(seq) => writer.write(&FieldName::DevSequence, &(seq as u32)),

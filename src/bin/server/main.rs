@@ -6,7 +6,7 @@ mod session;
 mod world;
 
 use crate::{
-    codec::Codec,
+    codec::{Codec, Rel},
     events::Event,
     net::{Broadcast, Net},
     rel::{dedup::AddrsSeenPacketIds, retx::PendingPackets},
@@ -136,20 +136,26 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
         }
     }
 
-    let ((pkt_id_in, pkt_id_out), mut reader, mut writer) =
-        ctx.codec
-            .preprocess_pkt(buf, sid, ctx.sess.next_seq(&skt_src));
+    let mut reader = ctx.codec.reader(buf);
+    let (inid, outid) = ctx.codec.pkt_ioids(&mut reader);
 
-    if let Some(pkt_id_in) = pkt_id_in {
-        ctx.net.send_to(&bitp::rel::ack::encode(pkt_id_in), skt_src);
+    if let Some(inid) = inid {
+        ctx.net.send_to(&bitp::rel::ack::encode(inid), skt_src);
 
-        if !ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in) {
-            ctx.addrs_seen_pkt_ids
-                .mark_seen(&skt_src, pkt_id_in, Instant::now());
-        } else {
+        if ctx.addrs_seen_pkt_ids.is_seen(&skt_src, inid) {
             return;
         }
+
+        ctx.addrs_seen_pkt_ids
+            .mark_seen(&skt_src, inid, Instant::now());
     }
+
+    let mut writer = ctx.codec.writer();
+    ctx.codec.seed_pkt(
+        &mut writer,
+        sid,
+        outid.map_or_else(|| Rel::Seq(ctx.sess.next_seq(&skt_src)), Rel::Id),
+    );
 
     let world_buf = ctx.world.process(sid, &mut reader, &mut writer);
 
@@ -158,8 +164,8 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
         skt_src: &skt_src,
         buf: &world_buf,
     }
-    .pipe(|args| match pkt_id_out {
-        Some(pkt_id_out) => ctx.net.broadcast_rel(args, pkt_id_out, ctx.pending_pkts),
+    .pipe(|args| match outid {
+        Some(outid) => ctx.net.broadcast_rel(args, outid, ctx.pending_pkts),
         None => ctx.net.broadcast(args),
     });
 }
