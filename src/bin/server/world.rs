@@ -1,7 +1,7 @@
 pub mod logic;
 
 use crate::{
-    codec::{Codec, FieldPack},
+    codec::{Codec, FieldsPack},
     rel::retx::PendingPackets,
 };
 use bitp::{
@@ -14,13 +14,20 @@ use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
 type WorldState = HashMap<u32, HashMap<FieldName, u32>>;
 
-pub struct World<'c> {
-    state: State,
-    codec: &'c Codec,
+/// Who to send to and where to track it
+pub struct RelTarget<'r> {
+    pub sid: u32,
+    pub skt_src: &'r SocketAddr,
+    pub pending_pkts: &'r mut PendingPackets,
 }
 
-impl<'c> World<'c> {
-    pub fn new(codec: &'c Codec) -> Self {
+pub struct World<'w> {
+    state: State,
+    codec: &'w Codec,
+}
+
+impl<'w> World<'w> {
+    pub fn new(codec: &'w Codec) -> Self {
         World {
             state: State::new(),
             codec,
@@ -31,45 +38,20 @@ impl<'c> World<'c> {
     /// is new.
     /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
     /// [FieldName::DevIsNewPlayer]
-    pub fn welcome_buf(
-        &self,
-        sid: u32,
-        skt_src: &SocketAddr,
-        pending_pkts: &mut PendingPackets,
-    ) -> Vec<u8> {
-        let id = self.codec.next_pkt_id();
-
-        let buf = self.codec.headful_pack(FieldPack {
-            id: Some(id),
-            fields: &[(FieldName::DevIsNewPlayer, 1)],
-            sid,
-        });
-
-        pending_pkts.insert(
-            (id, *skt_src),
-            PendingPacket::new(id, buf.to_vec(), Instant::now()),
-        );
-
+    pub fn welcome_buf(&self, rel_target: &mut RelTarget) -> Vec<u8> {
+        let (buf, _) = self.track(&[(FieldName::DevIsNewPlayer, 1)], rel_target);
         buf
     }
 
     /// Returns a reliable buffer and its id with essential spawn information.
     /// - X and Z location of the player
     /// - HSV color of the player
-    pub fn spawn_buf(
-        &mut self,
-        sid: u32,
-        skt_src: &SocketAddr,
-        pending_pkts: &mut PendingPackets,
-    ) -> (Vec<u8>, u8) {
+    pub fn spawn_buf(&mut self, rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
         let (spawn_pt, spawn_pt_codec) = (
             logic::spawn::player_spawn_pt(),
             loc_codec(self.codec.schema()),
         );
-        let (hsv, hsv_codec) = (
-            logic::color::hsv(), //
-            hsv_codec(self.codec.schema()),
-        );
+        let (hsv, hsv_codec) = (logic::color::hsv(), hsv_codec(self.codec.schema()));
 
         let fields = [
             (FieldName::LocationX, spawn_pt_codec.x.encode(spawn_pt.x)),
@@ -80,19 +62,22 @@ impl<'c> World<'c> {
         ];
 
         for (field_name, val) in fields.iter() {
-            self.state.save(field_name, sid, *val)
+            self.state.save(field_name, rel_target.sid, *val)
         }
 
-        let id = self.codec.next_pkt_id();
+        self.track(&fields, rel_target)
+    }
 
-        let buf = self.codec.headful_pack(FieldPack {
+    fn track(&self, fields: &[(FieldName, u32)], rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
+        let id = self.codec.next_pkt_id();
+        let buf = self.codec.headful_pack(FieldsPack {
             id: Some(id),
-            fields: &fields,
-            sid,
+            fields,
+            sid: rel_target.sid,
         });
 
-        pending_pkts.insert(
-            (id, *skt_src),
+        rel_target.pending_pkts.insert(
+            (id, *rel_target.skt_src),
             PendingPacket::new(id, buf.to_vec(), Instant::now()),
         );
 
@@ -150,7 +135,7 @@ impl<'c> World<'c> {
                     }
                 }
 
-                self.codec.headless_pack(FieldPack {
+                self.codec.headless_pack(FieldsPack {
                     id: None,
                     fields: &fields,
                     sid: *sid,

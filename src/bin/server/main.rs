@@ -11,7 +11,7 @@ use crate::{
     net::{Broadcast, Net},
     rel::{dedup::AddrsSeenPacketIds, retx::PendingPackets},
     session::Session,
-    world::World,
+    world::{RelTarget, World},
 };
 use bitp::rel::{ack::PacketType, retx::RetryAction};
 use std::{net::SocketAddr, time::Instant};
@@ -106,14 +106,20 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
     let sid = ctx.sess.sid(&skt_src);
 
     if is_new_cli {
-        let welcome_buf = ctx.world.welcome_buf(sid, &skt_src, ctx.pending_pkts);
+        let mut rel_targ = RelTarget {
+            sid,
+            skt_src: &skt_src,
+            pending_pkts: ctx.pending_pkts,
+        };
+
+        let welcome_buf = ctx.world.welcome_buf(&mut rel_targ);
         ctx.net.send_to(&welcome_buf, skt_src);
 
         // Capture world state before spawning player and saving its state in
         // the world/session
         let is_world_stateful = ctx.world.has_state();
 
-        let (spawn_buf, sb_id) = ctx.world.spawn_buf(sid, &skt_src, ctx.pending_pkts);
+        let (spawn_buf, sb_id) = ctx.world.spawn_buf(&mut rel_targ);
         ctx.net.send_to(&spawn_buf, skt_src);
         ctx.net.broadcast_rel(
             Broadcast {
@@ -134,8 +140,6 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
         ctx.codec
             .preprocess_pkt(buf, sid, ctx.sess.next_seq(&skt_src));
 
-    let world_buf = ctx.world.process(sid, &mut reader, &mut writer);
-
     if let Some(pkt_id_in) = pkt_id_in {
         ctx.net.send_to(&bitp::rel::ack::encode(pkt_id_in), skt_src);
 
@@ -146,6 +150,8 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
             return;
         }
     }
+
+    let world_buf = ctx.world.process(sid, &mut reader, &mut writer);
 
     Broadcast {
         addrs: ctx.sess.addrs(),

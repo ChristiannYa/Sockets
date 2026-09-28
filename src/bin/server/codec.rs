@@ -14,7 +14,7 @@ pub enum Rel {
     None,
 }
 
-pub struct FieldPack<'a> {
+pub struct FieldsPack<'a> {
     pub id: Option<u8>,
     pub fields: &'a [(FieldName, u32)],
     pub sid: u32,
@@ -59,7 +59,7 @@ impl Codec {
     }
 
     /// For packing schema related values and with the header prepended.
-    pub fn headful_pack(&self, args: FieldPack) -> Vec<u8> {
+    pub fn headful_pack(&self, args: FieldsPack) -> Vec<u8> {
         let mut buf = self.header_buf(DecodeType::Single);
         buf.extend(self.headless_pack(args));
         buf
@@ -68,7 +68,7 @@ impl Codec {
     /// For packing schema related values.
     ///
     /// *Contains `DevSessionId` by default*
-    pub fn headless_pack(&self, args: FieldPack) -> Vec<u8> {
+    pub fn headless_pack(&self, args: FieldsPack) -> Vec<u8> {
         let mut writer = self.writer();
         self.seed_pkt(&mut writer, args.sid, args.id.map_or(Rel::None, Rel::Id));
 
