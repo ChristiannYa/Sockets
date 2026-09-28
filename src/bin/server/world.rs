@@ -40,7 +40,7 @@ impl<'c> World<'c> {
         let id = self.codec.next_pkt_id();
 
         let buf = self.codec.headful_pack(FieldPack {
-            id: Some(id as u32),
+            id: Some(id),
             fields: &[(FieldName::DevIsNewPlayer, 1)],
             sid,
         });
@@ -86,7 +86,7 @@ impl<'c> World<'c> {
         let id = self.codec.next_pkt_id();
 
         let buf = self.codec.headful_pack(FieldPack {
-            id: Some(id as u32),
+            id: Some(id),
             fields: &fields,
             sid,
         });

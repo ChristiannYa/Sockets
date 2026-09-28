@@ -6,8 +6,16 @@ use bitp::{
     rel::ack::PacketType,
 };
 
+pub enum Rel {
+    Id(u8),
+    Seq(u8),
+
+    /// headless packs (e.g., sync records)
+    None,
+}
+
 pub struct FieldPack<'a> {
-    pub id: Option<u32>,
+    pub id: Option<u8>,
     pub fields: &'a [(FieldName, u32)],
     pub sid: u32,
 }
@@ -62,15 +70,10 @@ impl Codec {
     /// *Contains `DevSessionId` by default*
     pub fn headless_pack(&self, args: FieldPack) -> Vec<u8> {
         let mut writer = self.writer();
-
-        writer.write(&FieldName::DevSessionId, &args.sid);
-
-        if let Some(id) = args.id {
-            writer.write(&FieldName::DevPacketId, &id);
-        }
+        self.seed_pkt(&mut writer, args.sid, args.id.map_or(Rel::None, Rel::Id));
 
         for (name, val) in args.fields {
-            writer.write(name, val);
+            writer.write(name, val)
         }
 
         writer.buf()
@@ -90,28 +93,25 @@ impl Codec {
         buf: &'b [u8],
         sid: u32,
         seq: u8,
-    ) -> (Option<(u8, u8)>, BitReader<'_, 'b>, BitWriter<'_>) {
+    ) -> ((Option<u8>, Option<u8>), BitReader<'_, 'b>, BitWriter<'_>) {
         let (mut reader, mut writer) = (self.reader(buf), self.writer());
 
-        let pkt_io_ids = reader
+        let id_in = reader
             .isset(&FieldName::DevPacketId)
-            .then(|| reader.read(&FieldName::DevPacketId) as u8)
-            .map(|id| (id, self.next_pkt_id()));
+            .then(|| reader.read(&FieldName::DevPacketId) as u8);
+        let id_out = id_in.map(|_| self.next_pkt_id());
 
-        self.seed_pkt(&mut writer, sid, seq, pkt_io_ids);
+        self.seed_pkt(&mut writer, sid, id_out.map_or(Rel::Seq(seq), Rel::Id));
 
-        (pkt_io_ids, reader, writer)
+        ((id_in, id_out), reader, writer)
     }
 
-    fn seed_pkt(&self, writer: &mut BitWriter, sid: u32, seq: u8, pkt_io_ids: Option<(u8, u8)>) {
+    fn seed_pkt(&self, writer: &mut BitWriter, sid: u32, rel: Rel) {
         writer.write(&FieldName::DevSessionId, &sid);
-
-        if pkt_io_ids.is_none() {
-            writer.write(&FieldName::DevSequence, &(seq as u32))
-        }
-
-        if let Some((_, id_out)) = pkt_io_ids {
-            writer.write(&FieldName::DevPacketId, &(id_out as u32));
+        match rel {
+            Rel::Seq(seq) => writer.write(&FieldName::DevSequence, &(seq as u32)),
+            Rel::Id(id) => writer.write(&FieldName::DevPacketId, &(id as u32)),
+            Rel::None => {}
         }
     }
 }
