@@ -8,16 +8,14 @@ mod world;
 use crate::{
     codec::Codec,
     events::Event,
-    net::Net,
+    net::{Broadcast, Net},
     rel::{dedup::AddrsSeenPacketIds, retx::PendingPackets},
     session::Session,
     world::World,
 };
-use bitp::rel::{
-    ack::PacketType,
-    retx::{PendingPacket, RetryAction},
-};
+use bitp::rel::{ack::PacketType, retx::RetryAction};
 use std::{net::SocketAddr, time::Instant};
+use tap::Pipe;
 
 struct Ctx<'c, 'w> {
     net: &'c Net,
@@ -108,15 +106,24 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
     let sid = ctx.sess.sid(&skt_src);
 
     if is_new_cli {
-        ctx.net.send_to(&ctx.world.welcome_buf(sid), skt_src);
+        let welcome_buf = ctx.world.welcome_buf(sid, &skt_src, ctx.pending_pkts);
+        ctx.net.send_to(&welcome_buf, skt_src);
 
         // Capture world state before spawning player and saving its state in
         // the world/session
         let is_world_stateful = ctx.world.has_state();
 
-        let buf = ctx.world.player_spawn_buf(sid);
-        ctx.net.send_to(&buf, skt_src);
-        ctx.net.broadcast(ctx.sess.addrs(), &skt_src, &buf);
+        let (spawn_buf, sb_id) = ctx.world.spawn_buf(sid, &skt_src, ctx.pending_pkts);
+        ctx.net.send_to(&spawn_buf, skt_src);
+        ctx.net.broadcast_rel(
+            Broadcast {
+                addrs: ctx.sess.addrs(),
+                skt_src: &skt_src,
+                buf: &spawn_buf,
+            },
+            sb_id,
+            ctx.pending_pkts,
+        );
 
         if is_world_stateful {
             ctx.net.send_to(&ctx.world.sync_buf(sid), skt_src);
@@ -127,37 +134,26 @@ fn handle_data_pkt(ctx: &mut Ctx, buf: &[u8], skt_src: SocketAddr) {
         ctx.codec
             .preprocess_pkt(buf, sid, ctx.sess.next_seq(&skt_src));
 
-    let buf = ctx.world.process(sid, &mut reader, &mut writer);
+    let world_buf = ctx.world.process(sid, &mut reader, &mut writer);
 
-    if let Some((pkt_id_in, pkt_id_out)) = pkt_io_ids {
-        let seen = ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in);
-        println!("id_in={pkt_id_in}, id_out={pkt_id_out} seen={seen}");
-
+    if let Some((pkt_id_in, _)) = pkt_io_ids {
         ctx.net.send_to(&bitp::rel::ack::encode(pkt_id_in), skt_src);
 
-        if seen {
+        if !ctx.addrs_seen_pkt_ids.is_seen(&skt_src, pkt_id_in) {
+            ctx.addrs_seen_pkt_ids
+                .mark_seen(&skt_src, pkt_id_in, Instant::now());
+        } else {
             return;
         }
-
-        ctx.addrs_seen_pkt_ids
-            .mark_seen(&skt_src, pkt_id_in, Instant::now());
     }
 
-    match pkt_io_ids {
-        Some((_, pkt_id_out)) => {
-            let now = Instant::now();
-            for addr in ctx.sess.addrs() {
-                if *addr == skt_src {
-                    continue;
-                }
-                println!("broadcast id={pkt_id_out} to {addr}");
-                ctx.net.send_to(&buf, *addr);
-                ctx.pending_pkts.insert(
-                    (pkt_id_out, *addr),
-                    PendingPacket::new(pkt_id_out, buf.clone(), now),
-                );
-            }
-        }
-        None => ctx.net.broadcast(ctx.sess.addrs(), &skt_src, &buf),
+    Broadcast {
+        addrs: ctx.sess.addrs(),
+        skt_src: &skt_src,
+        buf: &world_buf,
     }
+    .pipe(|args| match pkt_io_ids {
+        Some((_, pkt_id_out)) => ctx.net.broadcast_rel(args, pkt_id_out, ctx.pending_pkts),
+        None => ctx.net.broadcast(args),
+    });
 }

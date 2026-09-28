@@ -1,12 +1,16 @@
 pub mod logic;
 
-use crate::codec::Codec;
+use crate::{
+    codec::{Codec, FieldPack},
+    rel::retx::PendingPackets,
+};
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
     fields::FieldName,
     quantize::{hsv::hsv_codec, loc::loc_codec},
+    rel::retx::PendingPacket,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
 type WorldState = HashMap<u32, HashMap<FieldName, u32>>;
 
@@ -23,17 +27,41 @@ impl<'c> World<'c> {
         }
     }
 
-    /// Returns a buffer with information indicating that the player is new.
-    /// Information: [DecodeType]'s `Single`, [FieldName]'s `SessionId` and `IsNewPlayer`
-    pub fn welcome_buf(&self, sid: u32) -> Vec<u8> {
-        self.codec
-            .headful_pack(&[(FieldName::DevIsNewPlayer, 1)], sid)
+    /// Returns a reliable buffer with information indicating that the player
+    /// is new.
+    /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
+    /// [FieldName::DevIsNewPlayer]
+    pub fn welcome_buf(
+        &self,
+        sid: u32,
+        skt_src: &SocketAddr,
+        pending_pkts: &mut PendingPackets,
+    ) -> Vec<u8> {
+        let id = self.codec.next_pkt_id();
+
+        let buf = self.codec.headful_pack(FieldPack {
+            id: Some(id as u32),
+            fields: &[(FieldName::DevIsNewPlayer, 1)],
+            sid,
+        });
+
+        pending_pkts.insert(
+            (id, *skt_src),
+            PendingPacket::new(id, buf.to_vec(), Instant::now()),
+        );
+
+        buf
     }
 
-    /// Returns a buffer with spawn information
+    /// Returns a reliable buffer and its id with essential spawn information.
     /// - X and Z location of the player
     /// - HSV color of the player
-    pub fn player_spawn_buf(&mut self, sid: u32) -> Vec<u8> {
+    pub fn spawn_buf(
+        &mut self,
+        sid: u32,
+        skt_src: &SocketAddr,
+        pending_pkts: &mut PendingPackets,
+    ) -> (Vec<u8>, u8) {
         let (spawn_pt, spawn_pt_codec) = (
             logic::spawn::player_spawn_pt(),
             loc_codec(self.codec.schema()),
@@ -55,7 +83,20 @@ impl<'c> World<'c> {
             self.state.save(field_name, sid, *val)
         }
 
-        self.codec.headful_pack(&fields, sid)
+        let id = self.codec.next_pkt_id();
+
+        let buf = self.codec.headful_pack(FieldPack {
+            id: Some(id as u32),
+            fields: &fields,
+            sid,
+        });
+
+        pending_pkts.insert(
+            (id, *skt_src),
+            PendingPacket::new(id, buf.to_vec(), Instant::now()),
+        );
+
+        (buf, id)
     }
 
     /// Reads every field out of `buf`, echoing each one into a new packet for
@@ -109,7 +150,11 @@ impl<'c> World<'c> {
                     }
                 }
 
-                self.codec.headless_pack(&fields, *sid)
+                self.codec.headless_pack(FieldPack {
+                    id: None,
+                    fields: &fields,
+                    sid: *sid,
+                })
             })
             .collect();
 

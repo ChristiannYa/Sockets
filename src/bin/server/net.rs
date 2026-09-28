@@ -1,7 +1,21 @@
-use std::net::{SocketAddr, UdpSocket};
+use crate::rel::retx::PendingPackets;
+use bitp::rel::retx::PendingPacket;
+use std::{
+    net::{SocketAddr, UdpSocket},
+    time::Instant,
+};
 
 pub struct Net {
     skt: UdpSocket,
+}
+
+pub struct Broadcast<'a, I>
+where
+    I: Iterator<Item = &'a SocketAddr>,
+{
+    pub addrs: I,
+    pub skt_src: &'a SocketAddr,
+    pub buf: &'a [u8],
 }
 
 impl Net {
@@ -21,16 +35,39 @@ impl Net {
     }
 
     /// Sends data to all known addresses excluding the socket source
-    pub fn broadcast<'a>(
-        &self,
-        addrs: impl Iterator<Item = &'a SocketAddr>,
-        skt_src: &SocketAddr,
-        buf: &[u8],
-    ) {
-        for addr in addrs {
-            if *addr != *skt_src {
-                self.skt.send_to(buf, addr).ok();
+    pub fn broadcast<'a, I>(&self, args: Broadcast<'a, I>)
+    where
+        I: Iterator<Item = &'a SocketAddr>,
+    {
+        for addr in args.addrs {
+            if *addr != *args.skt_src {
+                self.skt.send_to(args.buf, addr).ok();
             }
+        }
+    }
+
+    /// Sends `buf` to every address except `skt_src`, tracking a
+    /// `PendingPacket` per recipient under `(id, addr)` so each can be
+    /// retried independently until acked.
+    pub fn broadcast_rel<'a, I>(
+        &self,
+        args: Broadcast<'a, I>,
+        pkt_id: u8,
+        pending_pkts: &mut PendingPackets,
+    ) where
+        I: Iterator<Item = &'a SocketAddr>,
+    {
+        let now = Instant::now();
+        for addr in args.addrs {
+            if *addr == *args.skt_src {
+                continue;
+            }
+
+            self.send_to(args.buf, *addr);
+            pending_pkts.insert(
+                (pkt_id, *addr),
+                PendingPacket::new(pkt_id, args.buf.to_vec(), now),
+            );
         }
     }
 }

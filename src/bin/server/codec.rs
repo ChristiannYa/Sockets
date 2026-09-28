@@ -6,6 +6,12 @@ use bitp::{
     rel::ack::PacketType,
 };
 
+pub struct FieldPack<'a> {
+    pub id: Option<u32>,
+    pub fields: &'a [(FieldName, u32)],
+    pub sid: u32,
+}
+
 pub struct Codec {
     schema: PacketSchema,
     next_pkt_id: Cell<u8>,
@@ -45,21 +51,28 @@ impl Codec {
     }
 
     /// For packing schema related values and with the header prepended.
-    pub fn headful_pack(&self, fields: &[(FieldName, u32)], sid: u32) -> Vec<u8> {
+    pub fn headful_pack(&self, args: FieldPack) -> Vec<u8> {
         let mut buf = self.header_buf(DecodeType::Single);
-        buf.extend(self.headless_pack(fields, sid));
+        buf.extend(self.headless_pack(args));
         buf
     }
 
     /// For packing schema related values.
     ///
     /// *Contains `DevSessionId` by default*
-    pub fn headless_pack(&self, fields: &[(FieldName, u32)], sid: u32) -> Vec<u8> {
+    pub fn headless_pack(&self, args: FieldPack) -> Vec<u8> {
         let mut writer = self.writer();
-        writer.write(&FieldName::DevSessionId, &sid);
-        for (name, val) in fields {
+
+        writer.write(&FieldName::DevSessionId, &args.sid);
+
+        if let Some(id) = args.id {
+            writer.write(&FieldName::DevPacketId, &id);
+        }
+
+        for (name, val) in args.fields {
             writer.write(name, val);
         }
+
         writer.buf()
     }
 
