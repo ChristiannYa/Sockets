@@ -4,6 +4,7 @@ use crate::{
     codec::{Codec, FieldsPack},
     rel::retx::PendingPackets,
 };
+use bitp::util::log;
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
     fields::FieldName,
@@ -34,8 +35,7 @@ impl<'w> World<'w> {
         }
     }
 
-    /// Returns a reliable buffer with information indicating that the player
-    /// is new.
+    /// Returns a reliable buffer with the [FieldName::DevIsNewPlayer] flag
     /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
     /// [FieldName::DevIsNewPlayer]
     pub fn welcome_buf(&self, rel_target: &mut RelTarget) -> Vec<u8> {
@@ -96,7 +96,7 @@ impl<'w> World<'w> {
             writer.write(field_name, &val);
             self.state.save(field_name, sid, val);
 
-            println!("#{sid}: {field_name:?}={val}");
+            log(&format!("#{sid}: {field_name:?}={val}"));
         }
 
         let mut buf = self.codec.header_buf(DecodeType::Single);
