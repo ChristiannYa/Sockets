@@ -35,6 +35,10 @@ impl SeenPacketIds {
         self.ids
             .retain(|_, seen_at| now.duration_since(*seen_at) < SEEN_CUTOFF);
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.ids.is_empty()
+    }
 }
 
 impl Default for SeenPacketIds {

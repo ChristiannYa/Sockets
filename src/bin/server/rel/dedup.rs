@@ -30,5 +30,6 @@ impl AddrsSeenPacketIds {
         for seen_ids in self.ids.values_mut() {
             seen_ids.sweep(now);
         }
+        self.ids.retain(|_, seen_ids| !seen_ids.is_empty());
     }
 }
