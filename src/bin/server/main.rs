@@ -17,7 +17,7 @@ use crate::{
 };
 
 fn main() {
-    let net = Net::build("0.0.0.0:34254");
+    let net = Net::build("10.0.0.4:34254");
     let evs_rx = events::spawn(net.try_clone_skt());
 
     let mut sess = Session::new();
