@@ -25,7 +25,6 @@ impl AddrsSeenPacketIds {
     }
 
     /// Sweeps every sender's set
-    // @TODO: remove empty per-client entries once their set empties out
     pub fn sweep_all(&mut self, now: Instant) {
         for seen_ids in self.ids.values_mut() {
             seen_ids.sweep(now);

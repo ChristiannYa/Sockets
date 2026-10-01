@@ -2,23 +2,26 @@ use std::{
     net::{SocketAddr, UdpSocket},
     sync::mpsc::{self, Receiver},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 pub enum Event {
     Client(Vec<u8>, SocketAddr),
     Retry,
+    SimTick,
 }
 
 /// How often we **check** a retry condition
 const RETRY_CHECK_INTV: Duration = Duration::from_millis(20);
 
-/// Spawns the receive and retry interval threads, returning a channel that
-/// yields [Event] for the main thread to consume
+const SIM_TICK_INTV: Duration = Duration::from_micros(16_667);
+
+/// Spawns the receive, sim tick, and retry interval threads, returning a
+/// channel that yields [Event] for the main thread to consume
 pub fn spawn(skt: UdpSocket) -> Receiver<Event> {
     let (tx, rx) = mpsc::channel::<Event>();
 
-    // Thread 1: forwards every received packet
+    // Forward every received packet
     let tx_recv = tx.clone();
     thread::spawn(move || {
         let mut buf = [0u8; 1024];
@@ -37,7 +40,25 @@ pub fn spawn(skt: UdpSocket) -> Receiver<Event> {
         }
     });
 
-    // Thread 2: periodic nudge to check the pending map
+    // Fixed-rate simulation tick
+    let tx_tick = tx.clone();
+    thread::spawn(move || {
+        let mut next: Instant = Instant::now() + SIM_TICK_INTV;
+        loop {
+            thread::sleep(next.saturating_duration_since(Instant::now()));
+            if tx_tick.send(Event::SimTick).is_err() {
+                break;
+            }
+
+            // Computing a `next` deadline instad of calling
+            // `sleep(SIM_TICK_INTV)` each loop stops the rate from drifting
+            // which can be caused by `thread::sleep` not guaranteeing the
+            // exact sleep duration
+            next += SIM_TICK_INTV;
+        }
+    });
+
+    // Periodic nudge to check the pending map
     thread::spawn(move || {
         loop {
             thread::sleep(RETRY_CHECK_INTV);
