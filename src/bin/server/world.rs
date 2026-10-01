@@ -4,10 +4,10 @@ use crate::{
     codec::{Codec, FieldsPack},
     rel::retx::PendingPackets,
 };
-use bitp::util::log;
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
     fields::FieldName,
+    logt,
     quantize::{hsv::hsv_codec, loc::loc_codec},
     rel::retx::PendingPacket,
 };
@@ -96,7 +96,7 @@ impl<'w> World<'w> {
             writer.write(field_name, &val);
             self.state.save(field_name, sid, val);
 
-            log(&format!("#{sid}: {field_name:?}={val}"));
+            logt!("#{sid}: {field_name:?}={val}")
         }
 
         let mut buf = self.codec.header_buf(DecodeType::Single);
