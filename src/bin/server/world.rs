@@ -6,8 +6,8 @@ use crate::{
 };
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
-    fields::FieldName,
     logt,
+    pkt::FieldName,
     quantize::{hsv::hsv_codec, loc::loc_codec},
     rel::retx::PendingPacket,
 };

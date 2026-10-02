@@ -1,4 +1,4 @@
-mod recv_cli;
+mod recv;
 mod retry;
 
 use std::net::SocketAddr;
@@ -44,7 +44,8 @@ impl<'c, 'w> Manager<'c, 'w> {
     }
 
     pub fn recv_cli(&mut self, buf: &[u8], skt_src: SocketAddr) {
-        recv_cli::recv_cli(self, buf, skt_src);
+        // should use new funtion
+        recv::buf(self, buf, skt_src);
     }
 
     pub fn sim_tick(&mut self) {}

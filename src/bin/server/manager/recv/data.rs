@@ -1,39 +1,28 @@
 use crate::{codec::Rel, manager::Manager, net::Broadcast, world::RelTarget};
-use bitp::rel::ack::PacketType;
 use std::{net::SocketAddr, time::Instant};
 use tap::Pipe;
 
-pub fn recv_cli(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
-    match bitp::rel::ack::decode(buf) {
-        Some(id) => {
-            crate::rel::ack::handle_ack(manager.pending_pkts, id, &skt_src);
-        }
-        None if buf.first() == Some(&(PacketType::Data as u8)) => {
-            // Strip header bytes since they are not in the schema
-            if let Some(buf) = buf.get(2..) {
-                DataPkt::new(manager, skt_src).handle(buf);
-            };
-        }
-        None => {}
-    }
-}
-
-struct DataPkt<'a, 'c, 'w> {
-    manager: &'a mut Manager<'c, 'w>,
+pub struct DataPkt<'d, 'c, 'w> {
+    manager: &'d mut Manager<'c, 'w>,
     skt_src: SocketAddr,
+    buf: &'d [u8],
 }
 
-impl<'a, 'c, 'w> DataPkt<'a, 'c, 'w> {
-    fn new(manager: &'a mut Manager<'c, 'w>, skt_src: SocketAddr) -> Self {
-        DataPkt { manager, skt_src }
+impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
+    pub fn new(manager: &'d mut Manager<'c, 'w>, skt_src: SocketAddr, buf: &'d [u8]) -> Self {
+        DataPkt {
+            manager,
+            skt_src,
+            buf,
+        }
     }
 
-    fn handle(&mut self, buf: &[u8]) {
+    pub fn recv(&mut self) {
         // Bail early on packets too short to even hold the mask bytes the schema
         // expects.
         // Protects `BitReader::new()`'s `split_at()` from panicking and
         // taking the whole server down over one client's bad packet.
-        if buf.len() < self.manager.codec.schema().fields.len().div_ceil(8) {
+        if self.buf.len() < self.manager.codec.schema().fields.len().div_ceil(8) {
             return;
         }
 
@@ -45,7 +34,7 @@ impl<'a, 'c, 'w> DataPkt<'a, 'c, 'w> {
             self.spawn_new_cli(sid);
         }
 
-        let mut reader = self.manager.codec.reader(buf);
+        let mut reader = self.manager.codec.reader(self.buf);
         let (inid, outid) = self.manager.codec.pkt_ioids(&mut reader);
 
         if let Some(inid) = inid {

@@ -7,7 +7,7 @@ use std::{
 
 use bitp::{
     bits::{BitReader, BitWriter, PacketSchema},
-    fields::{FIELD_LENGTHS, FieldName},
+    pkt::{FIELD_LENGTHS, FieldName},
 };
 
 fn main() {

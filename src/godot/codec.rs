@@ -1,8 +1,7 @@
 use crate::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
-    fields::FIELD_LENGTHS,
+    pkt::{FIELD_LENGTHS, PacketKind},
     quantize::{hsv::hsv_codec, loc::loc_codec},
-    rel::ack::PacketType,
 };
 use godot::{
     meta::ToGodot,
@@ -20,9 +19,9 @@ pub struct UdpCodec {
 #[godot_api]
 impl UdpCodec {
     #[constant]
-    const PKT_DATA: u8 = PacketType::Data as u8;
+    const PKT_DATA: u8 = PacketKind::Data as u8;
     #[constant]
-    const PKT_ACK: u8 = PacketType::Ack as u8;
+    const PKT_ACK: u8 = PacketKind::Ack as u8;
 
     #[constant]
     const DEC_SINGLE: u8 = DecodeType::Single as u8;
@@ -120,7 +119,7 @@ impl UdpCodec {
             }
         }
 
-        let mut buf = vec![PacketType::Data as u8, DecodeType::Single as u8];
+        let mut buf = vec![PacketKind::Data as u8, DecodeType::Single as u8];
         buf.extend(writer.buf());
         PackedByteArray::from(buf.as_slice())
     }

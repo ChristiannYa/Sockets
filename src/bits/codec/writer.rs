@@ -2,7 +2,7 @@ use tap::Pipe;
 
 use crate::{
     bits::{codec::prog::BufferProgress, schema::PacketSchema, utils::mask},
-    fields::FieldName,
+    pkt::FieldName,
 };
 
 pub struct BitWriter<'s> {
@@ -79,12 +79,9 @@ impl<'s> BitWriter<'s> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::bits::{BitReader, BitWriter, schema::PacketSchema, utils::split_into_bytes};
     use tap::{Pipe, Tap};
-
-    use crate::{
-        bits::{BitReader, BitWriter, schema::PacketSchema, utils::split_into_bytes},
-        fields::FieldName,
-    };
 
     fn t_write_fields(writer: &mut BitWriter, fields: &[(FieldName, u32)]) -> String {
         let mut bits_acc_str: String = String::from("");

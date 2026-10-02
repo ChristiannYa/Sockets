@@ -1,5 +1,5 @@
 pub mod bits;
-pub mod fields;
+pub mod pkt;
 pub mod quantize;
 pub mod rel;
 pub mod sim;

@@ -2,7 +2,7 @@ use tap::Pipe;
 
 use crate::{
     bits::{PacketSchema, codec::prog::BufferProgress, utils::mask},
-    fields::FieldName,
+    pkt::FieldName,
 };
 
 pub struct BitReader<'s, 'b> {
@@ -77,12 +77,9 @@ impl<'s, 'b> BitReader<'s, 'b> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::bits::{BitReader, BitWriter, schema::PacketSchema};
     use tap::{Pipe, Tap};
-
-    use crate::{
-        bits::{BitReader, BitWriter, schema::PacketSchema},
-        fields::FieldName,
-    };
 
     fn t_reads_match(
         schema: &PacketSchema,

@@ -1,12 +1,20 @@
 use crate::bits::utils::mask;
 
 pub struct FixedPoint {
-    pub step: f32,
-    pub offset: u32,
-    pub bits_len: usize,
+    step: f32,
+    offset: u32,
+    bits_len: usize,
 }
 
 impl FixedPoint {
+    pub const fn new(step: f32, offset: u32, bits_len: usize) -> Self {
+        FixedPoint {
+            step,
+            offset,
+            bits_len,
+        }
+    }
+
     pub fn encode(&self, val: f32) -> u32 {
         let step_ct = (val / self.step).round() as i32;
         let max = mask(&self.bits_len) as i32;

@@ -2,8 +2,9 @@ use std::cell::Cell;
 
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
-    fields::{FIELD_LENGTHS, FieldName},
-    rel::ack::PacketType,
+    pkt::{
+        PacketKind, {FIELD_LENGTHS, FieldName},
+    },
 };
 
 pub enum Rel {
@@ -55,7 +56,7 @@ impl Codec {
 
     /// Returns the 2-byte `[PacketType:: Data, decode_type]` header
     pub fn header_buf(&self, decode_type: DecodeType) -> Vec<u8> {
-        vec![PacketType::Data as u8, decode_type as u8]
+        vec![PacketKind::Data as u8, decode_type as u8]
     }
 
     /// For packing schema related values and with the header prepended.
