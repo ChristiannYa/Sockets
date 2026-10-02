@@ -6,59 +6,83 @@ use crate::sim::{
     state::PlayerState,
 };
 
-/// Advance player by one fixed tick.
-pub fn step(p: &mut PlayerState, inp: &Input) {
-    let dt = TICK_DT;
+struct Step<'a> {
+    p: &'a mut PlayerState,
+    inp: &'a Input,
+}
 
-    // Gravity
-    p.vel[1] -= GRAVITY * dt;
-
-    // Horizontal velocity
-    let (wd_x, wd_z) = wish_dir(inp);
-    if (wd_x.powi(2) + wd_z.powi(2)).sqrt() > 0.01 {
-        p.vel[0] = wd_x * SPEED;
-        p.vel[2] = wd_z * SPEED;
-    } else {
-        p.vel[0] = move_toward(p.vel[0], 0.0, DECC * dt);
-        p.vel[2] = move_toward(p.vel[2], 0.0, DECC * dt);
+impl<'a> Step<'a> {
+    pub fn new(p: &'a mut PlayerState, inp: &'a Input) -> Self {
+        Step { p, inp }
     }
 
-    // Jump
-    if inp.jump && p.is_on_floor {
-        p.vel[1] = JUMP_VEL;
+    pub fn s(&mut self) {
+        self.apply_gravity();
+
+        self.mv_x_vel();
+        self.mv_y_jump();
+        self.mv_y_crouch();
+
+        self.integrate();
+        self.temp_floor();
     }
 
-    // Crouch
-    if p.is_on_floor {
-        let dir = if inp.crouch { -1.0 } else { 1.0 };
-        p.height = (p.height + dir * CROUCH_SPEED * dt).clamp(CROUCH_HEIGHT, HEIGHT);
+    fn apply_gravity(&mut self) {
+        self.p.vel[1] -= GRAVITY * TICK_DT;
     }
 
-    // Integrate
-    p.pos[0] += p.vel[0] * dt;
-    p.pos[1] += p.vel[1] * dt;
-    p.pos[2] += p.vel[2] * dt;
+    fn mv_x_vel(&mut self) {
+        let (x, z) = wish_dir(self.inp.mv_x, self.inp.mv_z, self.inp.yaw);
+        if x.hypot(z) > 0.01 {
+            self.p.vel[0] = x * SPEED;
+            self.p.vel[2] = z * SPEED;
+        } else {
+            self.p.vel[0] = move_toward(self.p.vel[0], 0.0, DECC * TICK_DT);
+            self.p.vel[2] = move_toward(self.p.vel[2], 0.0, DECC * TICK_DT);
+        }
+    }
 
-    // Temporary flat floor
-    if p.pos[1] <= FLOOR_Y {
-        p.pos[1] = FLOOR_Y;
-        p.vel[1] = 0.0;
-        p.is_on_floor = true;
-    } else {
-        p.is_on_floor = false;
+    fn mv_y_jump(&mut self) {
+        if self.inp.jump && self.p.is_on_floor {
+            self.p.vel[1] = JUMP_VEL
+        }
+    }
+
+    fn mv_y_crouch(&mut self) {
+        if self.p.is_on_floor {
+            let dir = if self.inp.crouch { -1.0 } else { 1.0 };
+            let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
+            self.p.height = (h).clamp(CROUCH_HEIGHT, HEIGHT);
+        }
+    }
+
+    fn integrate(&mut self) {
+        self.p.pos[0] += self.p.vel[0] * TICK_DT;
+        self.p.pos[1] += self.p.vel[1] * TICK_DT;
+        self.p.pos[2] += self.p.vel[2] * TICK_DT;
+    }
+
+    fn temp_floor(&mut self) {
+        if self.p.pos[1] <= FLOOR_Y {
+            self.p.pos[1] = FLOOR_Y;
+            self.p.vel[1] = 0.0;
+            self.p.is_on_floor = true;
+        } else {
+            self.p.is_on_floor = false;
+        }
     }
 }
 
-fn wish_dir(inp: &Input) -> (f32, f32) {
-    let mag = (inp.mv_x.powi(2) + inp.mv_z.powi(2)).sqrt();
+fn wish_dir(x: f32, z: f32, yaw: f32) -> (f32, f32) {
+    let mag = x.hypot(z);
 
     let (mv_x, mv_z) = if mag > 1.0 {
-        (inp.mv_x / mag, inp.mv_z / mag)
+        (x / mag, z / mag)
     } else {
-        (inp.mv_x, inp.mv_z)
+        (x, z)
     };
 
-    let (yaw_sin, yaw_cos) = inp.yaw.sin_cos();
+    let (yaw_sin, yaw_cos) = yaw.sin_cos();
     (
         yaw_cos * mv_x + yaw_sin * mv_z,
         -yaw_sin * mv_x + yaw_cos * mv_z,
@@ -75,7 +99,6 @@ fn move_toward(from: f32, to: f32, delta: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     fn approx(a: f32, b: f32) -> bool {
@@ -88,7 +111,7 @@ mod tests {
         let inp = Input::default();
 
         for _ in 0..60 {
-            step(&mut p, &inp);
+            Step::new(&mut p, &inp).s();
         }
 
         assert_eq!(p.pos, [3.0, FLOOR_Y, -2.0]);
@@ -104,7 +127,7 @@ mod tests {
 
         let mut ticks = 0;
         while !p.is_on_floor && ticks < 1000 {
-            step(&mut p, &inp);
+            Step::new(&mut p, &inp).s();
             ticks += 1;
         }
 
@@ -123,7 +146,7 @@ mod tests {
             ..Default::default()
         };
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
 
         assert!(approx(p.vel[2], -6.0));
         assert!(approx(p.pos[2], -6.0 * TICK_DT));
@@ -138,7 +161,7 @@ mod tests {
             ..Default::default()
         };
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
 
         // Facing +90deg around y, "forward" points along -x
         assert!(approx(p.vel[0], -6.0));
@@ -154,7 +177,7 @@ mod tests {
             ..Default::default()
         };
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
 
         let speed = (p.vel[0].powi(2) + p.vel[2].powi(2)).sqrt();
         assert!(approx(speed, 6.0), "speed was {speed}");
@@ -168,11 +191,11 @@ mod tests {
             ..Default::default()
         };
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
 
         let mut ticks = 0;
         while p.vel[2] != 0.0 && ticks < 100 {
-            step(&mut p, &Input::default());
+            Step::new(&mut p, &Input::default()).s();
             ticks += 1;
         }
 
@@ -181,6 +204,7 @@ mod tests {
     }
 
     #[test]
+    // "Apex": Highest point of a jump
     fn mv_y_jump_airtime_and_apex() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
@@ -188,13 +212,13 @@ mod tests {
             ..Default::default()
         };
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
         assert!(!p.is_on_floor);
 
         let mut ticks = 1;
         let mut apex = p.pos[1];
         while !p.is_on_floor && ticks < 200 {
-            step(&mut p, &Input::default());
+            Step::new(&mut p, &Input::default()).s();
             apex = apex.max(p.pos[1]);
             ticks += 1;
         }
@@ -219,7 +243,7 @@ mod tests {
             ..Default::default()
         };
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
 
         // Only gravity applied: -30 * (1/60)
         assert!(approx(p.vel[1], -0.5));
@@ -234,15 +258,15 @@ mod tests {
         };
 
         for _ in 0..9 {
-            step(&mut p, &inp);
+            Step::new(&mut p, &inp).s();
         }
         assert!(p.height > CROUCH_HEIGHT + 0.05);
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
         assert!(approx(p.height, CROUCH_HEIGHT));
 
         // Further cruching can't go below the minimum
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
         assert!(approx(p.height, CROUCH_HEIGHT))
     }
 
@@ -254,11 +278,11 @@ mod tests {
             ..Default::default()
         };
         for _ in 0..15 {
-            step(&mut p, &inp);
+            Step::new(&mut p, &inp).s();
         }
 
         for _ in 0..15 {
-            step(&mut p, &Input::default());
+            Step::new(&mut p, &Input::default()).s();
         }
 
         assert!(approx(p.height, HEIGHT));
@@ -274,7 +298,7 @@ mod tests {
             ..Default::default()
         };
 
-        step(&mut p, &inp);
+        Step::new(&mut p, &inp).s();
 
         assert!(approx(p.height, HEIGHT));
     }
