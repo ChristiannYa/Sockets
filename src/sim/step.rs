@@ -1,5 +1,7 @@
 use crate::sim::{
-    consts::{DECC, FLOOR_Y, GRAVITY, SPEED, TICK_DT},
+    consts::{
+        CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT, JUMP_VEL, SPEED, TICK_DT,
+    },
     input::Input,
     state::PlayerState,
 };
@@ -19,6 +21,17 @@ pub fn step(p: &mut PlayerState, inp: &Input) {
     } else {
         p.vel[0] = move_toward(p.vel[0], 0.0, DECC * dt);
         p.vel[2] = move_toward(p.vel[2], 0.0, DECC * dt);
+    }
+
+    // Jump
+    if inp.jump && p.is_on_floor {
+        p.vel[1] = JUMP_VEL;
+    }
+
+    // Crouch
+    if p.is_on_floor {
+        let dir = if inp.crouch { -1.0 } else { 1.0 };
+        p.height = (p.height + dir * CROUCH_SPEED * dt).clamp(CROUCH_HEIGHT, HEIGHT);
     }
 
     // Integrate
@@ -101,7 +114,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_fwd_inp_reaches_full_speed_immediately() {
+    fn mv_x_fwd_inp_reaches_full_speed_immediately() {
         let mut p = PlayerState::spawn(0.0, 0.0);
 
         // In Godot, "forward" is -z
@@ -117,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_yaw_rotates_movement() {
+    fn mv_x_yaw_rotates_movement() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
             mv_z: -1.0,
@@ -133,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_diagonal_input_is_clamped() {
+    fn mv_x_diagonal_input_is_clamped() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
             mv_x: 1.0,
@@ -148,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_inp_release_stops_in_about_a_third_of_a_second() {
+    fn mv_x_inp_release_stops_in_about_a_third_of_a_second() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
             mv_z: -1.0,
@@ -165,5 +178,104 @@ mod tests {
 
         // 6 / 20 = 0.3s = 18 ticks
         assert!((17..=19).contains(&ticks), "stopped after {ticks} ticks");
+    }
+
+    #[test]
+    fn mv_y_jump_airtime_and_apex() {
+        let mut p = PlayerState::spawn(0.0, 0.0);
+        let inp = Input {
+            jump: true,
+            ..Default::default()
+        };
+
+        step(&mut p, &inp);
+        assert!(!p.is_on_floor);
+
+        let mut ticks = 1;
+        let mut apex = p.pos[1];
+        while !p.is_on_floor && ticks < 200 {
+            step(&mut p, &Input::default());
+            apex = apex.max(p.pos[1]);
+            ticks += 1;
+        }
+
+        // Analytic 2*14/30 = 0.93s (56s); this stepping order lands a bit
+        // later
+        assert!((55..=59).contains(&ticks), "landed after {ticks} ticks");
+
+        // Analytic 14^2/(2*30) = 3.27m; discrete stepping overshoots
+        // slightly
+        assert!((3.2..=3.5).contains(&apex), "apex was {apex}");
+    }
+
+    #[test]
+    fn mv_y_jump_ignored_in_air() {
+        let mut p = PlayerState::spawn(0.0, 0.0);
+        p.pos[1] = FLOOR_Y + 5.0;
+        p.is_on_floor = false;
+
+        let inp = Input {
+            jump: true,
+            ..Default::default()
+        };
+
+        step(&mut p, &inp);
+
+        // Only gravity applied: -30 * (1/60)
+        assert!(approx(p.vel[1], -0.5));
+    }
+
+    #[test]
+    fn mv_y_crouch_takes_ten_ticks() {
+        let mut p = PlayerState::spawn(0.0, 0.0);
+        let inp = Input {
+            crouch: true,
+            ..Default::default()
+        };
+
+        for _ in 0..9 {
+            step(&mut p, &inp);
+        }
+        assert!(p.height > CROUCH_HEIGHT + 0.05);
+
+        step(&mut p, &inp);
+        assert!(approx(p.height, CROUCH_HEIGHT));
+
+        // Further cruching can't go below the minimum
+        step(&mut p, &inp);
+        assert!(approx(p.height, CROUCH_HEIGHT))
+    }
+
+    #[test]
+    fn mv_y_crouch_release_regrows() {
+        let mut p = PlayerState::spawn(0.0, 0.0);
+        let inp = Input {
+            crouch: true,
+            ..Default::default()
+        };
+        for _ in 0..15 {
+            step(&mut p, &inp);
+        }
+
+        for _ in 0..15 {
+            step(&mut p, &Input::default());
+        }
+
+        assert!(approx(p.height, HEIGHT));
+    }
+
+    #[test]
+    fn mv_y_crouch_ignored_in_air() {
+        let mut p = PlayerState::spawn(0.0, 0.0);
+        p.pos[1] = FLOOR_Y + 5.0;
+        p.is_on_floor = false;
+        let inp = Input {
+            crouch: true,
+            ..Default::default()
+        };
+
+        step(&mut p, &inp);
+
+        assert!(approx(p.height, HEIGHT));
     }
 }
