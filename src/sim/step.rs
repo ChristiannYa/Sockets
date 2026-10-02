@@ -6,7 +6,7 @@ use crate::sim::{
     state::PlayerState,
 };
 
-struct Step<'a> {
+pub struct Step<'a> {
     p: &'a mut PlayerState,
     inp: &'a Input,
 }
@@ -16,7 +16,7 @@ impl<'a> Step<'a> {
         Step { p, inp }
     }
 
-    pub fn s(&mut self) {
+    pub fn run(&mut self) {
         self.apply_gravity();
 
         self.mv_x_vel();
@@ -52,7 +52,7 @@ impl<'a> Step<'a> {
         if self.p.is_on_floor {
             let dir = if self.inp.crouch { -1.0 } else { 1.0 };
             let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
-            self.p.height = (h).clamp(CROUCH_HEIGHT, HEIGHT);
+            self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
         }
     }
 
@@ -111,7 +111,7 @@ mod tests {
         let inp = Input::default();
 
         for _ in 0..60 {
-            Step::new(&mut p, &inp).s();
+            Step::new(&mut p, &inp).run();
         }
 
         assert_eq!(p.pos, [3.0, FLOOR_Y, -2.0]);
@@ -127,7 +127,7 @@ mod tests {
 
         let mut ticks = 0;
         while !p.is_on_floor && ticks < 1000 {
-            Step::new(&mut p, &inp).s();
+            Step::new(&mut p, &inp).run();
             ticks += 1;
         }
 
@@ -146,7 +146,7 @@ mod tests {
             ..Default::default()
         };
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
 
         assert!(approx(p.vel[2], -6.0));
         assert!(approx(p.pos[2], -6.0 * TICK_DT));
@@ -161,7 +161,7 @@ mod tests {
             ..Default::default()
         };
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
 
         // Facing +90deg around y, "forward" points along -x
         assert!(approx(p.vel[0], -6.0));
@@ -177,7 +177,7 @@ mod tests {
             ..Default::default()
         };
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
 
         let speed = (p.vel[0].powi(2) + p.vel[2].powi(2)).sqrt();
         assert!(approx(speed, 6.0), "speed was {speed}");
@@ -191,11 +191,11 @@ mod tests {
             ..Default::default()
         };
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
 
         let mut ticks = 0;
         while p.vel[2] != 0.0 && ticks < 100 {
-            Step::new(&mut p, &Input::default()).s();
+            Step::new(&mut p, &Input::default()).run();
             ticks += 1;
         }
 
@@ -212,13 +212,13 @@ mod tests {
             ..Default::default()
         };
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
         assert!(!p.is_on_floor);
 
         let mut ticks = 1;
         let mut apex = p.pos[1];
         while !p.is_on_floor && ticks < 200 {
-            Step::new(&mut p, &Input::default()).s();
+            Step::new(&mut p, &Input::default()).run();
             apex = apex.max(p.pos[1]);
             ticks += 1;
         }
@@ -243,7 +243,7 @@ mod tests {
             ..Default::default()
         };
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
 
         // Only gravity applied: -30 * (1/60)
         assert!(approx(p.vel[1], -0.5));
@@ -258,15 +258,15 @@ mod tests {
         };
 
         for _ in 0..9 {
-            Step::new(&mut p, &inp).s();
+            Step::new(&mut p, &inp).run();
         }
         assert!(p.height > CROUCH_HEIGHT + 0.05);
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
         assert!(approx(p.height, CROUCH_HEIGHT));
 
         // Further cruching can't go below the minimum
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
         assert!(approx(p.height, CROUCH_HEIGHT))
     }
 
@@ -278,11 +278,11 @@ mod tests {
             ..Default::default()
         };
         for _ in 0..15 {
-            Step::new(&mut p, &inp).s();
+            Step::new(&mut p, &inp).run();
         }
 
         for _ in 0..15 {
-            Step::new(&mut p, &Input::default()).s();
+            Step::new(&mut p, &Input::default()).run();
         }
 
         assert!(approx(p.height, HEIGHT));
@@ -298,7 +298,7 @@ mod tests {
             ..Default::default()
         };
 
-        Step::new(&mut p, &inp).s();
+        Step::new(&mut p, &inp).run();
 
         assert!(approx(p.height, HEIGHT));
     }
