@@ -23,6 +23,10 @@ impl Session {
         })
     }
 
+    pub fn sid_of(&self, skt_src: &SocketAddr) -> Option<u32> {
+        self.clis.get(skt_src).copied()
+    }
+
     /// Advances and returns the sequence number for the client's next packet.
     pub fn next_seq(&mut self, skt_src: &SocketAddr) -> u8 {
         let seq = self.seqs.entry(*skt_src).or_insert(0);

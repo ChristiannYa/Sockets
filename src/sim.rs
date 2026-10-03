@@ -1,4 +1,7 @@
 pub mod consts;
-pub mod input;
-pub mod state;
+mod inp;
+mod state;
 pub mod step;
+
+pub use inp::Input;
+pub use state::PlayerState;

@@ -1,8 +1,11 @@
 pub mod logic;
+pub mod player;
+mod state;
 
 use crate::{
     codec::{Codec, FieldsPack},
     rel::retx::PendingPackets,
+    world::{player::Player, state::WorldState},
 };
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
@@ -13,8 +16,6 @@ use bitp::{
 };
 use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
-type WorldState = HashMap<u32, HashMap<FieldName, u32>>;
-
 /// Who to send to and where to track it
 pub struct RelTarget<'r> {
     pub sid: u32,
@@ -23,15 +24,17 @@ pub struct RelTarget<'r> {
 }
 
 pub struct World<'w> {
-    state: State,
+    state: WorldState,
     codec: &'w Codec,
+    players: HashMap<u32, Player>,
 }
 
 impl<'w> World<'w> {
     pub fn new(codec: &'w Codec) -> Self {
         World {
-            state: State::new(),
+            state: WorldState::new(),
             codec,
+            players: HashMap::new(),
         }
     }
 
@@ -156,23 +159,5 @@ impl<'w> World<'w> {
 
     pub fn has_state(&self) -> bool {
         !self.state.world.is_empty()
-    }
-}
-
-struct State {
-    world: WorldState,
-}
-
-impl State {
-    pub fn new() -> Self {
-        let world = WorldState::new();
-        State { world }
-    }
-
-    pub fn save(&mut self, field_name: &FieldName, sid: u32, val: u32) {
-        self.world
-            .entry(sid)
-            .or_default()
-            .insert(field_name.clone(), val);
     }
 }

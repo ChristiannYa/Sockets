@@ -1,4 +1,4 @@
 mod fixed_pt;
 pub mod hsv;
-pub mod input;
+pub mod inp;
 pub mod loc;

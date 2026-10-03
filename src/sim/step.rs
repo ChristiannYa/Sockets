@@ -2,7 +2,7 @@ use crate::sim::{
     consts::{
         CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT, JUMP_VEL, SPEED, TICK_DT,
     },
-    input::Input,
+    inp::Input,
     state::PlayerState,
 };
 

@@ -3,22 +3,29 @@ use std::net::SocketAddr;
 use crate::manager::Manager;
 use bitp::{
     pkt::FieldName,
-    quantize::input::{MV, YAW},
-    sim::input::Input,
+    quantize::inp::{MV, YAW},
+    sim::Input,
 };
 
 pub struct InpPkt<'i, 'c, 'w> {
     manager: &'i mut Manager<'c, 'w>,
     skt_src: SocketAddr,
     buf: &'i [u8],
+    sid: u32,
 }
 
 impl<'i, 'c, 'w> InpPkt<'i, 'c, 'w> {
-    pub fn new(manager: &'i mut Manager<'c, 'w>, skt_src: SocketAddr, buf: &'i [u8]) -> Self {
+    pub fn new(
+        manager: &'i mut Manager<'c, 'w>,
+        skt_src: SocketAddr,
+        buf: &'i [u8],
+        sid: u32,
+    ) -> Self {
         InpPkt {
             manager,
             skt_src,
             buf,
+            sid,
         }
     }
 
