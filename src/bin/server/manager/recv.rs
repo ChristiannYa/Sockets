@@ -23,7 +23,7 @@ pub fn buf(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
             };
         }
         Ok(PacketKind::Inp) => {
-            let Some(sid) = manager.sess.sid_of(&skt_src) else {
+            let Some(sid) = manager.sess.id_of(&skt_src) else {
                 return;
             };
             if let Some(buf) = buf.get(1..) {

@@ -15,7 +15,7 @@ impl Session {
         }
     }
 
-    pub fn sid(&mut self, skt_src: &SocketAddr) -> u32 {
+    pub fn id(&mut self, skt_src: &SocketAddr) -> u32 {
         *self.clis.entry(*skt_src).or_insert_with(|| {
             let next = self.next;
             self.next += 1;
@@ -23,7 +23,7 @@ impl Session {
         })
     }
 
-    pub fn sid_of(&self, skt_src: &SocketAddr) -> Option<u32> {
+    pub fn id_of(&self, skt_src: &SocketAddr) -> Option<u32> {
         self.clis.get(skt_src).copied()
     }
 

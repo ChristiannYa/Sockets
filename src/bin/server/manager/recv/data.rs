@@ -24,7 +24,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
 
         // Capture client newness before potential registration
         let is_new_cli = self.manager.sess.is_new_cli(&self.skt_src);
-        let sid = self.manager.sess.sid(&self.skt_src);
+        let sid = self.manager.sess.id(&self.skt_src);
 
         if is_new_cli {
             self.spawn_new_cli(sid);
