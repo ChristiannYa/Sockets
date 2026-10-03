@@ -1,5 +1,8 @@
+mod seq;
 #[cfg(test)]
 pub mod test;
+
+pub use seq::Seq;
 
 #[macro_export]
 macro_rules! logt {

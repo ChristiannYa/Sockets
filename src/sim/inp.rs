@@ -1,20 +1,37 @@
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Input {
+/// State the player is *in*. Safe to repeat when an input is missing.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Held {
     pub mv_x: f32,
     pub mv_z: f32,
     pub yaw: f32,
-    pub jump: bool,
     pub crouch: bool,
 }
 
+/// One-shot actions that happened on this tick. Never repeated.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Edges {
+    pub jump: bool,
+    // pub shot: bool,
+}
+
+/// @TODO: Rename to PlayerSimInp so that it does not collide
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Input {
+    pub held: Held,
+    pub edges: Edges,
+}
+
 impl Input {
-    pub fn new(mv_x: f32, mv_z: f32, yaw: f32, jump: bool, crouch: bool) -> Self {
+    pub fn new(held: Held, edges: Edges) -> Self {
+        Input { held, edges }
+    }
+
+    /// The input to assume when the real one is missing: held state (movement,
+    /// crouch, yaw) carry over, instant actions do not (e.g. jump, shot) do not.
+    pub fn held_only(self) -> Input {
         Input {
-            mv_x,
-            mv_z,
-            yaw,
-            jump,
-            crouch,
+            held: self.held,
+            edges: Edges::default(),
         }
     }
 }

@@ -32,7 +32,7 @@ impl<'a> Step<'a> {
     }
 
     fn mv_x_vel(&mut self) {
-        let (x, z) = wish_dir(self.inp.mv_x, self.inp.mv_z, self.inp.yaw);
+        let (x, z) = wish_dir(self.inp.held.mv_x, self.inp.held.mv_z, self.inp.held.yaw);
         if x.hypot(z) > 0.01 {
             self.p.vel[0] = x * SPEED;
             self.p.vel[2] = z * SPEED;
@@ -43,14 +43,14 @@ impl<'a> Step<'a> {
     }
 
     fn mv_y_jump(&mut self) {
-        if self.inp.jump && self.p.is_on_floor {
+        if self.inp.edges.jump && self.p.is_on_floor {
             self.p.vel[1] = JUMP_VEL
         }
     }
 
     fn mv_y_crouch(&mut self) {
         if self.p.is_on_floor {
-            let dir = if self.inp.crouch { -1.0 } else { 1.0 };
+            let dir = if self.inp.held.crouch { -1.0 } else { 1.0 };
             let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
             self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
         }
@@ -99,6 +99,8 @@ fn move_toward(from: f32, to: f32, delta: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use crate::sim::{Edges, Held};
+
     use super::*;
 
     fn approx(a: f32, b: f32) -> bool {
@@ -140,11 +142,16 @@ mod tests {
     fn mv_x_fwd_inp_reaches_full_speed_immediately() {
         let mut p = PlayerState::spawn(0.0, 0.0);
 
-        // In Godot, "forward" is -z
-        let inp = Input {
-            mv_z: -1.0,
-            ..Default::default()
-        };
+        let inp = Input::new(
+            Held {
+                // In Godot, "forward" is -z
+                mv_z: -1.0,
+                ..Default::default()
+            },
+            Edges {
+                ..Default::default()
+            },
+        );
 
         Step::new(&mut p, &inp).run();
 
@@ -156,8 +163,11 @@ mod tests {
     fn mv_x_yaw_rotates_movement() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
-            mv_z: -1.0,
-            yaw: std::f32::consts::FRAC_PI_2,
+            held: Held {
+                mv_z: -1.0,
+                yaw: std::f32::consts::FRAC_PI_2,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -172,8 +182,11 @@ mod tests {
     fn mv_x_diagonal_input_is_clamped() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
-            mv_x: 1.0,
-            mv_z: 1.0,
+            held: Held {
+                mv_x: 1.0,
+                mv_z: 1.0,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -187,7 +200,10 @@ mod tests {
     fn mv_x_inp_release_stops_in_about_a_third_of_a_second() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
-            mv_z: -1.0,
+            held: Held {
+                mv_z: -1.0,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -208,7 +224,10 @@ mod tests {
     fn mv_y_jump_airtime_and_apex() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
-            jump: true,
+            edges: Edges {
+                jump: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -239,7 +258,10 @@ mod tests {
         p.is_on_floor = false;
 
         let inp = Input {
-            jump: true,
+            edges: Edges {
+                jump: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -253,7 +275,10 @@ mod tests {
     fn mv_y_crouch_takes_ten_ticks() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
-            crouch: true,
+            held: Held {
+                crouch: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -274,7 +299,10 @@ mod tests {
     fn mv_y_crouch_release_regrows() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = Input {
-            crouch: true,
+            held: Held {
+                crouch: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
         for _ in 0..15 {
@@ -294,7 +322,10 @@ mod tests {
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
         let inp = Input {
-            crouch: true,
+            held: Held {
+                crouch: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
