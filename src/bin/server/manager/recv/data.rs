@@ -18,11 +18,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
     }
 
     pub fn recv(&mut self) {
-        // Bail early on packets too short to even hold the mask bytes the schema
-        // expects.
-        // Protects `BitReader::new()`'s `split_at()` from panicking and
-        // taking the whole server down over one client's bad packet.
-        if self.buf.len() < self.manager.codec.schema().fields.len().div_ceil(8) {
+        if !self.manager.codec.schema().mask_fits(self.buf) {
             return;
         }
 

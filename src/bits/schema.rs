@@ -42,4 +42,17 @@ impl PacketSchema {
             .map(|(ind, (_, len))| FieldInfo { ind, len: *len })
             .unwrap_or_else(|| panic!("Field '{:?}' not found", field_name))
     }
+
+    pub fn mask_len(&self) -> usize {
+        self.fields.len().div_ceil(8)
+    }
+
+    /// **!Warning**
+    /// It does not protect the case when a client sends
+    /// ```
+    /// [0b00000100, 0b00000000] // mask only, payload is empty
+    /// ```
+    pub fn mask_fits(&self, buf: &[u8]) -> bool {
+        buf.len() >= self.mask_len()
+    }
 }

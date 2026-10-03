@@ -1,5 +1,3 @@
-use tap::Pipe;
-
 use crate::{
     bits::{codec::prog::BufferProgress, schema::PacketSchema, utils::mask},
     pkt::FieldName,
@@ -14,17 +12,11 @@ pub struct BitWriter<'s> {
 
 impl<'s> BitWriter<'s> {
     pub fn new(packet_schema: &'s PacketSchema) -> Self {
-        let buf_mask: Vec<u8> = packet_schema
-            .fields
-            .len()
-            .div_ceil(8)
-            .pipe(|len| vec![0u8; len]);
-
         BitWriter {
             packet_schema,
             buf: Vec::new(),
             bits_acc: 0,
-            buf_mask,
+            buf_mask: vec![0; packet_schema.mask_len()],
         }
     }
 

@@ -10,13 +10,28 @@ use bitp::{
 pub struct InpPkt<'i, 'c, 'w> {
     manager: &'i mut Manager<'c, 'w>,
     skt_src: SocketAddr,
-    seq: u8,
-    inp: Input,
+    buf: &'i [u8],
 }
 
 impl<'i, 'c, 'w> InpPkt<'i, 'c, 'w> {
-    pub fn new(manager: &'i mut Manager<'c, 'w>, skt_src: SocketAddr, buf: &[u8]) -> Self {
-        let mut reader = manager.codec.reader(buf);
+    pub fn new(manager: &'i mut Manager<'c, 'w>, skt_src: SocketAddr, buf: &'i [u8]) -> Self {
+        InpPkt {
+            manager,
+            skt_src,
+            buf,
+        }
+    }
+
+    pub fn recv(&mut self) {
+        if !self.manager.codec.schema().mask_fits(self.buf) {
+            return;
+        }
+
+        let (seq, inp) = self.inp();
+    }
+
+    fn inp(&mut self) -> (u8, Input) {
+        let mut reader = self.manager.codec.reader(self.buf);
 
         let seq = reader.read(&FieldName::InputSeq) as u8;
         let mv_x = MV.decode(reader.read(&FieldName::InputMvX));
@@ -25,13 +40,6 @@ impl<'i, 'c, 'w> InpPkt<'i, 'c, 'w> {
         let jump = reader.read(&FieldName::InputJump) == 1;
         let crouch = reader.read(&FieldName::InputCrouch) == 1;
 
-        InpPkt {
-            manager,
-            skt_src,
-            seq,
-            inp: Input::new(mv_x, mv_z, yaw, jump, crouch),
-        }
+        (seq, Input::new(mv_x, mv_z, yaw, jump, crouch))
     }
-
-    pub fn recv(&mut self) {}
 }

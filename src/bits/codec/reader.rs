@@ -13,21 +13,14 @@ pub struct BitReader<'s, 'b> {
 }
 
 impl<'s, 'b> BitReader<'s, 'b> {
-    pub fn new(packet_schema: &'s PacketSchema, buf: &'b [u8]) -> Self {
-        let (buf_mask, buf) = Self::split_buf(packet_schema.fields, buf);
+    pub fn new(pkt_schema: &'s PacketSchema, buf: &'b [u8]) -> Self {
+        let (buf_mask, buf) = buf.split_at(pkt_schema.mask_len());
         BitReader {
-            packet_schema,
+            packet_schema: pkt_schema,
             buf,
             buf_mask,
             bits_acc: 0,
         }
-    }
-
-    fn split_buf(field_schemas: &'s [(FieldName, usize)], buf: &'b [u8]) -> (&'b [u8], &'b [u8]) {
-        field_schemas
-            .len()
-            .div_ceil(8)
-            .pipe(|len| buf.split_at(len))
     }
 
     pub fn read(&mut self, field_name: &FieldName) -> u32 {
