@@ -2,18 +2,18 @@ use crate::sim::{
     consts::{
         CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT, JUMP_VEL, SPEED, TICK_DT,
     },
-    inp::Input,
+    inp::PlayerInpSim,
     state::PlayerState,
 };
 
 pub struct Step<'a> {
     p: &'a mut PlayerState,
-    inp: &'a Input,
+    sim_inp: &'a PlayerInpSim,
 }
 
 impl<'a> Step<'a> {
-    pub fn new(p: &'a mut PlayerState, inp: &'a Input) -> Self {
-        Step { p, inp }
+    pub fn new(p: &'a mut PlayerState, sim_inp: &'a PlayerInpSim) -> Self {
+        Step { p, sim_inp }
     }
 
     pub fn run(&mut self) {
@@ -32,7 +32,11 @@ impl<'a> Step<'a> {
     }
 
     fn mv_x_vel(&mut self) {
-        let (x, z) = wish_dir(self.inp.held.mv_x, self.inp.held.mv_z, self.inp.held.yaw);
+        let (x, z) = wish_dir(
+            self.sim_inp.held.mv_x,
+            self.sim_inp.held.mv_z,
+            self.sim_inp.held.yaw,
+        );
         if x.hypot(z) > 0.01 {
             self.p.vel[0] = x * SPEED;
             self.p.vel[2] = z * SPEED;
@@ -43,14 +47,14 @@ impl<'a> Step<'a> {
     }
 
     fn mv_y_jump(&mut self) {
-        if self.inp.edges.jump && self.p.is_on_floor {
+        if self.sim_inp.edges.jump && self.p.is_on_floor {
             self.p.vel[1] = JUMP_VEL
         }
     }
 
     fn mv_y_crouch(&mut self) {
         if self.p.is_on_floor {
-            let dir = if self.inp.held.crouch { -1.0 } else { 1.0 };
+            let dir = if self.sim_inp.held.crouch { -1.0 } else { 1.0 };
             let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
             self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
         }
@@ -110,7 +114,7 @@ mod tests {
     #[test]
     fn gravity_spawned_stays_put() {
         let mut p = PlayerState::spawn(3.0, -2.0);
-        let inp = Input::default();
+        let inp = PlayerInpSim::default();
 
         for _ in 0..60 {
             Step::new(&mut p, &inp).run();
@@ -125,7 +129,7 @@ mod tests {
         let mut p = PlayerState::spawn(0.0, 0.0);
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
-        let inp = Input::default();
+        let inp = PlayerInpSim::default();
 
         let mut ticks = 0;
         while !p.is_on_floor && ticks < 1000 {
@@ -142,7 +146,7 @@ mod tests {
     fn mv_x_fwd_inp_reaches_full_speed_immediately() {
         let mut p = PlayerState::spawn(0.0, 0.0);
 
-        let inp = Input::new(
+        let inp = PlayerInpSim::new(
             Held {
                 // In Godot, "forward" is -z
                 mv_z: -1.0,
@@ -162,7 +166,7 @@ mod tests {
     #[test]
     fn mv_x_yaw_rotates_movement() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = Input {
+        let inp = PlayerInpSim {
             held: Held {
                 mv_z: -1.0,
                 yaw: std::f32::consts::FRAC_PI_2,
@@ -181,7 +185,7 @@ mod tests {
     #[test]
     fn mv_x_diagonal_input_is_clamped() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = Input {
+        let inp = PlayerInpSim {
             held: Held {
                 mv_x: 1.0,
                 mv_z: 1.0,
@@ -199,7 +203,7 @@ mod tests {
     #[test]
     fn mv_x_inp_release_stops_in_about_a_third_of_a_second() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = Input {
+        let inp = PlayerInpSim {
             held: Held {
                 mv_z: -1.0,
                 ..Default::default()
@@ -211,7 +215,7 @@ mod tests {
 
         let mut ticks = 0;
         while p.vel[2] != 0.0 && ticks < 100 {
-            Step::new(&mut p, &Input::default()).run();
+            Step::new(&mut p, &PlayerInpSim::default()).run();
             ticks += 1;
         }
 
@@ -223,7 +227,7 @@ mod tests {
     // "Apex": Highest point of a jump
     fn mv_y_jump_airtime_and_apex() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = Input {
+        let inp = PlayerInpSim {
             edges: Edges {
                 jump: true,
                 ..Default::default()
@@ -237,7 +241,7 @@ mod tests {
         let mut ticks = 1;
         let mut apex = p.pos[1];
         while !p.is_on_floor && ticks < 200 {
-            Step::new(&mut p, &Input::default()).run();
+            Step::new(&mut p, &PlayerInpSim::default()).run();
             apex = apex.max(p.pos[1]);
             ticks += 1;
         }
@@ -257,7 +261,7 @@ mod tests {
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
 
-        let inp = Input {
+        let inp = PlayerInpSim {
             edges: Edges {
                 jump: true,
                 ..Default::default()
@@ -274,7 +278,7 @@ mod tests {
     #[test]
     fn mv_y_crouch_takes_ten_ticks() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = Input {
+        let inp = PlayerInpSim {
             held: Held {
                 crouch: true,
                 ..Default::default()
@@ -298,7 +302,7 @@ mod tests {
     #[test]
     fn mv_y_crouch_release_regrows() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = Input {
+        let inp = PlayerInpSim {
             held: Held {
                 crouch: true,
                 ..Default::default()
@@ -310,7 +314,7 @@ mod tests {
         }
 
         for _ in 0..15 {
-            Step::new(&mut p, &Input::default()).run();
+            Step::new(&mut p, &PlayerInpSim::default()).run();
         }
 
         assert!(approx(p.height, HEIGHT));
@@ -321,7 +325,7 @@ mod tests {
         let mut p = PlayerState::spawn(0.0, 0.0);
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
-        let inp = Input {
+        let inp = PlayerInpSim {
             held: Held {
                 crouch: true,
                 ..Default::default()

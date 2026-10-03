@@ -5,7 +5,7 @@ mod state;
 use crate::{
     codec::{Codec, FieldsPack},
     rel::retx::PendingPackets,
-    world::{player::Player, state::WorldState},
+    world::{player::Players, state::WorldState},
 };
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
@@ -14,7 +14,7 @@ use bitp::{
     quantize::{hsv::hsv_codec, loc::loc_codec},
     rel::retx::PendingPacket,
 };
-use std::{collections::HashMap, net::SocketAddr, time::Instant};
+use std::{net::SocketAddr, time::Instant};
 
 /// Who to send to and where to track it
 pub struct RelTarget<'r> {
@@ -24,9 +24,11 @@ pub struct RelTarget<'r> {
 }
 
 pub struct World<'w> {
+    /// Legacy relay, will be deprecated in the future
     state: WorldState,
+
     codec: &'w Codec,
-    players: HashMap<u32, Player>,
+    pub players: Players,
 }
 
 impl<'w> World<'w> {
@@ -34,7 +36,7 @@ impl<'w> World<'w> {
         World {
             state: WorldState::new(),
             codec,
-            players: HashMap::new(),
+            players: Players::default(),
         }
     }
 

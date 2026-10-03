@@ -4,7 +4,7 @@ use crate::manager::Manager;
 use bitp::{
     pkt::FieldName,
     quantize::inp::{MV, YAW},
-    sim::{Edges, Held, Input},
+    sim::{Edges, Held, PlayerInpSim},
 };
 
 pub struct InpPkt<'i, 'c, 'w> {
@@ -34,10 +34,10 @@ impl<'i, 'c, 'w> InpPkt<'i, 'c, 'w> {
             return;
         }
 
-        let (seq, inp) = self.inp();
+        let (seq, sim_inp) = self.inp();
     }
 
-    fn inp(&mut self) -> (u8, Input) {
+    fn inp(&mut self) -> (u8, PlayerInpSim) {
         let mut reader = self.manager.codec.reader(self.buf);
 
         let seq = reader.read(&FieldName::InputSeq) as u8;
@@ -53,6 +53,6 @@ impl<'i, 'c, 'w> InpPkt<'i, 'c, 'w> {
             jump: reader.read(&FieldName::InputJump) == 1,
         };
 
-        (seq, Input::new(held, edges))
+        (seq, PlayerInpSim::new(held, edges))
     }
 }

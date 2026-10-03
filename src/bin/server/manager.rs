@@ -44,9 +44,10 @@ impl<'c, 'w> Manager<'c, 'w> {
     }
 
     pub fn recv_cli(&mut self, buf: &[u8], skt_src: SocketAddr) {
-        // should use new funtion
         recv::buf(self, buf, skt_src);
     }
 
-    pub fn sim_tick(&mut self) {}
+    pub fn sim_tick(&mut self) {
+        self.world.players.tick();
+    }
 }

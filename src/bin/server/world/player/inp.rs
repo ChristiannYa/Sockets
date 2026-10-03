@@ -1,11 +1,11 @@
-use bitp::{sim::Input, util::Seq};
+use bitp::{sim::PlayerInpSim, util::Seq};
 use std::collections::VecDeque;
 
 const QUEUE_MAX: usize = 8;
 
-pub struct PlayerInput {
-    queue: VecDeque<(Seq, Input)>,
-    last: Input,
+pub struct PlayerInpQueue {
+    queue: VecDeque<(Seq, PlayerInpSim)>,
+    last_sim: PlayerInpSim,
 
     /// Newest sequence that arrived
     latest_seq: Option<Seq>,
@@ -13,20 +13,20 @@ pub struct PlayerInput {
     /// The sequence number the simulation most recently simulated.
     /// Used to echo it on snapshots, and the client will use it for
     /// reconciliation
-    sim_seq: Seq,
+    simed_seq: Seq,
 }
 
-impl PlayerInput {
+impl PlayerInpQueue {
     pub fn new() -> Self {
-        PlayerInput {
+        PlayerInpQueue {
             queue: VecDeque::new(),
-            last: Input::default(),
+            last_sim: PlayerInpSim::default(),
             latest_seq: None,
-            sim_seq: Seq(0),
+            simed_seq: Seq(0),
         }
     }
 
-    pub fn push(&mut self, seq: Seq, inp: Input) {
+    pub fn push(&mut self, seq: Seq, sim_inp: PlayerInpSim) {
         if self
             .latest_seq
             .is_some_and(|latest| !seq.is_newer_than(latest))
@@ -38,25 +38,24 @@ impl PlayerInput {
         if self.queue.len() >= QUEUE_MAX {
             self.queue.pop_front();
         }
-        self.queue.push_back((seq, inp));
+        self.queue.push_back((seq, sim_inp));
     }
 
-    /// Pops the next queued input for this tick.
-    /// If the queue is empty, repeats the last input with `jump` cleared so a
-    /// lost packet can't re-trigger a jump.
-    pub fn next(&mut self) -> Input {
+    /// Pops the next queued input for this tick and returns it.
+    /// If the queue is empty it repeats the last input with the edge fields
+    /// reset so a lost packet can't retrigger them
+    pub fn next(&mut self) -> PlayerInpSim {
         match self.queue.pop_front() {
-            Some((seq, inp)) => {
-                // Consume queued input
-                self.sim_seq = seq;
-                self.last = inp;
+            Some((simed_seq, sim_inp)) => {
+                self.simed_seq = simed_seq;
+                self.last_sim = sim_inp;
             }
-            None => self.last = self.last.held_only(),
+            None => self.last_sim = self.last_sim.held_only(),
         }
-        self.last
+        self.last_sim
     }
 
-    pub fn applied_seq(&self) -> Seq {
-        self.sim_seq
+    pub fn simed_seq(&self) -> Seq {
+        self.simed_seq
     }
 }

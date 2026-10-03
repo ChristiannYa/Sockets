@@ -14,22 +14,21 @@ pub struct Edges {
     // pub shot: bool,
 }
 
-/// @TODO: Rename to PlayerSimInp so that it does not collide
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Input {
+pub struct PlayerInpSim {
     pub held: Held,
     pub edges: Edges,
 }
 
-impl Input {
+impl PlayerInpSim {
     pub fn new(held: Held, edges: Edges) -> Self {
-        Input { held, edges }
+        PlayerInpSim { held, edges }
     }
 
     /// The input to assume when the real one is missing: held state (movement,
     /// crouch, yaw) carry over, instant actions do not (e.g. jump, shot) do not.
-    pub fn held_only(self) -> Input {
-        Input {
+    pub fn held_only(self) -> PlayerInpSim {
+        PlayerInpSim {
             held: self.held,
             edges: Edges::default(),
         }
