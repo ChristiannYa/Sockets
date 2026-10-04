@@ -1,6 +1,6 @@
-mod inp;
+mod inp_queue;
 
-use crate::world::player::inp::PlayerInpQueue;
+use crate::world::player::inp_queue::PlayerInpQueue;
 use bitp::{
     sim::{PlayerInpSim, PlayerState, Step},
     util::Seq,

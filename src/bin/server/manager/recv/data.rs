@@ -59,7 +59,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
         // the world/session
         let is_world_stateful = self.manager.world.has_state();
 
-        let (spawn_buf, sb_id) = self.manager.world.spawn_buf(&mut rel_targ);
+        let (spawn_buf, sb_id) = self.manager.world.spawn_player(&mut rel_targ);
         self.manager.net.send_to(&spawn_buf, self.skt_src);
         self.manager.net.broadcast_rel(
             Broadcast {

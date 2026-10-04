@@ -44,23 +44,31 @@ impl<'w> World<'w> {
     /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
     /// [FieldName::DevIsNewPlayer]
     pub fn welcome_buf(&self, rel_target: &mut RelTarget) -> Vec<u8> {
-        let (buf, _) = self.track(&[(FieldName::DevIsNewPlayer, 1)], rel_target);
+        let (buf, _) = self.rel_track(&[(FieldName::DevIsNewPlayer, 1)], rel_target);
         buf
     }
 
-    /// Returns a reliable buffer and its id with essential spawn information.
-    /// - X and Z location of the player
-    /// - HSV color of the player
-    pub fn spawn_buf(&mut self, rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
+    /// Spawns player in the simulation
+    /// Returns a reliable buffer along with its id containing essential spawn
+    /// information (location and color)
+    pub fn spawn_player(&mut self, rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
         let (spawn_pt, spawn_pt_codec) = (
             logic::spawn::player_spawn_pt(),
             loc_codec(self.codec.schema()),
         );
-        let (hsv, hsv_codec) = (logic::color::hsv(), hsv_codec(self.codec.schema()));
+        let (hsv, hsv_codec) = (
+            logic::color::hsv(),
+            hsv_codec(self.codec.schema()), //
+        );
+
+        let (enc_x, enc_z) = (
+            spawn_pt_codec.x.encode(spawn_pt.x),
+            spawn_pt_codec.z.encode(spawn_pt.z),
+        );
 
         let fields = [
-            (FieldName::LocationX, spawn_pt_codec.x.encode(spawn_pt.x)),
-            (FieldName::LocationZ, spawn_pt_codec.z.encode(spawn_pt.z)),
+            (FieldName::LocationX, enc_x),
+            (FieldName::LocationZ, enc_z),
             (FieldName::ColorH, hsv_codec.h.encode(hsv.h)),
             (FieldName::ColorS, hsv_codec.s.encode(hsv.s)),
             (FieldName::ColorV, hsv_codec.v.encode(hsv.v)),
@@ -70,10 +78,16 @@ impl<'w> World<'w> {
             self.state.save(field_name, rel_target.sid, *val)
         }
 
-        self.track(&fields, rel_target)
+        self.players.spawn(
+            rel_target.sid,
+            spawn_pt_codec.x.decode(enc_x),
+            spawn_pt_codec.z.decode(enc_z),
+        );
+
+        self.rel_track(&fields, rel_target)
     }
 
-    fn track(&self, fields: &[(FieldName, u32)], rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
+    fn rel_track(&self, fields: &[(FieldName, u32)], rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
         let id = self.codec.next_pkt_id();
         let buf = self.codec.headful_pack(FieldsPack {
             id: Some(id),
