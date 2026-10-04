@@ -1,11 +1,20 @@
-use std::net::SocketAddr;
-
 use crate::manager::Manager;
 use bitp::{
     pkt::FieldName,
     quantize::inp::{MV, YAW},
     sim::{Edges, Held, PlayerInpSim},
+    util::Seq,
 };
+use std::net::SocketAddr;
+
+const INP_FIELDS: [FieldName; 6] = [
+    FieldName::InputSeq,
+    FieldName::InputMvX,
+    FieldName::InputMvZ,
+    FieldName::InputYaw,
+    FieldName::InputJump,
+    FieldName::InputCrouch,
+];
 
 pub struct InpPkt<'i, 'c, 'w> {
     manager: &'i mut Manager<'c, 'w>,
@@ -30,15 +39,28 @@ impl<'i, 'c, 'w> InpPkt<'i, 'c, 'w> {
     }
 
     pub fn recv(&mut self) {
-        if !self.manager.codec.schema().mask_fits(self.buf) {
+        let Some((seq, sim_inp)) = self.inp() else {
             return;
-        }
-
-        let (seq, sim_inp) = self.inp();
+        };
+        self.manager.world.players.push_inp(self.sid, seq, sim_inp);
     }
 
-    fn inp(&mut self) -> (u8, PlayerInpSim) {
+    fn inp(&self) -> Option<(Seq, PlayerInpSim)> {
+        let schema = self.manager.codec.schema();
+
+        let payload_ceil_len = INP_FIELDS
+            .iter()
+            .map(|field_name| schema.info_of(field_name).len)
+            .sum::<usize>()
+            .div_ceil(8);
+        if self.buf.len() < schema.mask_len() + payload_ceil_len {
+            return None;
+        }
+
         let mut reader = self.manager.codec.reader(self.buf);
+        if !INP_FIELDS.iter().all(|field_name| reader.isset(field_name)) {
+            return None;
+        }
 
         let seq = reader.read(&FieldName::InputSeq) as u8;
 
@@ -53,6 +75,6 @@ impl<'i, 'c, 'w> InpPkt<'i, 'c, 'w> {
             jump: reader.read(&FieldName::InputJump) == 1,
         };
 
-        (seq, PlayerInpSim::new(held, edges))
+        Some((Seq(seq), PlayerInpSim::new(held, edges)))
     }
 }

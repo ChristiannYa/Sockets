@@ -27,6 +27,8 @@ fn main() {
     let mut pending_pkts = PendingPackets::new();
     let mut addrs_seen_pkt_ids = AddrsSeenPacketIds::new();
 
+    // @TODO: All events are handled by this thread, and it could cause
+    // it to stall due slow work, which would slow down the events' threads
     for ev in evs_rx {
         let mut manager = Manager::new(
             &net,

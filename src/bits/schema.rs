@@ -47,8 +47,7 @@ impl PacketSchema {
         self.fields.len().div_ceil(8)
     }
 
-    /// **!Warning**
-    /// It does not protect the case when a client sends
+    /// @TODO: Handle the case where it does not protect when a client sends
     /// ```
     /// [0b00000100, 0b00000000] // mask only, payload is empty
     /// ```

@@ -11,9 +11,7 @@ pub enum Event {
     SimTick,
 }
 
-/// How often we **check** a retry condition
 const RETRY_CHECK_INTV: Duration = Duration::from_millis(20);
-
 const SIM_TICK_INTV: Duration = Duration::from_micros(16_667);
 
 /// Spawns the receive, sim tick, and retry interval threads, returning a
