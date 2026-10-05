@@ -1,9 +1,9 @@
 mod data;
-mod inp;
+mod intent;
 
 use crate::manager::{
     Manager,
-    recv::{data::DataPkt, inp::InpPkt},
+    recv::{data::DataPkt, intent::IntentPkt},
 };
 use bitp::pkt::PacketKind;
 use std::net::SocketAddr;
@@ -22,12 +22,12 @@ pub fn buf(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
                 DataPkt::new(manager, skt_src, buf).recv();
             };
         }
-        Ok(PacketKind::Inp) => {
+        Ok(PacketKind::Intent) => {
             let Some(sid) = manager.sess.id_of(&skt_src) else {
                 return;
             };
             if let Some(buf) = buf.get(1..) {
-                InpPkt::new(manager, skt_src, buf, sid).recv();
+                IntentPkt::new(manager, skt_src, buf, sid).recv();
             }
         }
         Err(()) => {}

@@ -22,6 +22,8 @@ impl UdpCodec {
     const PKT_DATA: u8 = PacketKind::Data as u8;
     #[constant]
     const PKT_ACK: u8 = PacketKind::Ack as u8;
+    #[constant]
+    const PKT_INTENT: u8 = PacketKind::Intent as u8;
 
     #[constant]
     const DEC_SINGLE: u8 = DecodeType::Single as u8;

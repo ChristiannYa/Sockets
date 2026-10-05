@@ -1,8 +1,8 @@
 pub mod consts;
-mod inp;
+mod intent;
 mod state;
 mod step;
 
-pub use inp::{Edges, Held, PlayerInpSim};
+pub use intent::{Edges, Held, PlayerIntentSim};
 pub use state::PlayerState;
 pub use step::Step;

@@ -1,4 +1,4 @@
-/// State the player is *in*. Safe to repeat when an input is missing.
+/// State the player is *in*. Safe to repeat when an intent is missing.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Held {
     pub mv_x: f32,
@@ -15,20 +15,20 @@ pub struct Edges {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct PlayerInpSim {
+pub struct PlayerIntentSim {
     pub held: Held,
     pub edges: Edges,
 }
 
-impl PlayerInpSim {
+impl PlayerIntentSim {
     pub fn new(held: Held, edges: Edges) -> Self {
-        PlayerInpSim { held, edges }
+        PlayerIntentSim { held, edges }
     }
 
-    /// The input to assume when the real one is missing: held state (movement,
+    /// The intent to assume when the real one is missing: held state (movement,
     /// crouch, yaw) carry over, instant actions do not (e.g. jump, shot) do not.
-    pub fn held_only(self) -> PlayerInpSim {
-        PlayerInpSim {
+    pub fn held_only(self) -> PlayerIntentSim {
+        PlayerIntentSim {
             held: self.held,
             edges: Edges::default(),
         }

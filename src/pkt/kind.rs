@@ -2,7 +2,7 @@
 pub enum PacketKind {
     Data,
     Ack,
-    Inp,
+    Intent,
 }
 
 impl TryFrom<u8> for PacketKind {
@@ -13,7 +13,7 @@ impl TryFrom<u8> for PacketKind {
         match buf {
             0 => Ok(Self::Data),
             1 => Ok(Self::Ack),
-            2 => Ok(Self::Inp),
+            2 => Ok(Self::Intent),
             _ => Err(()),
         }
     }

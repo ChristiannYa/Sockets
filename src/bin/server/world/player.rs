@@ -1,8 +1,8 @@
-mod inp_queue;
+mod intent_queue;
 
-use crate::world::player::inp_queue::PlayerInpQueue;
+use crate::world::player::intent_queue::PlayerIntentQueue;
 use bitp::{
-    sim::{PlayerInpSim, PlayerState, Step},
+    sim::{PlayerIntentSim, PlayerState, Step},
     util::Seq,
 };
 use std::collections::HashMap;
@@ -18,16 +18,16 @@ impl Players {
         self.hm.insert(sid, Player::new(x, z));
     }
 
-    pub fn push_inp(&mut self, sid: u32, seq: Seq, sim_inp: PlayerInpSim) {
+    pub fn queue_intent(&mut self, sid: u32, seq: Seq, sim_intent: PlayerIntentSim) {
         if let Some(player) = self.hm.get_mut(&sid) {
-            player.inp_queue.push(seq, sim_inp);
+            player.intent_queue.queue(seq, sim_intent);
         }
     }
 
     pub fn tick(&mut self) {
         for player in self.hm.values_mut() {
-            let sim_inp = player.inp_queue.next();
-            Step::new(&mut player.state, &sim_inp).run();
+            let sim_intent = player.intent_queue.next();
+            Step::new(&mut player.state, &sim_intent).run();
         }
 
         // @TODO: remove once the sim is verified
@@ -38,25 +38,22 @@ impl Players {
             println!(
                 "sid={sid} pos={:?} simed_seq{}",
                 player.state.pos,
-                player.inp_queue.simed_seq().0
+                player.intent_queue.simed_seq().0
             )
         }
-    }
-    pub fn remove(&mut self, sid: u32) {
-        self.hm.remove(&sid);
     }
 }
 
 pub struct Player {
     pub state: PlayerState,
-    pub inp_queue: PlayerInpQueue,
+    pub intent_queue: PlayerIntentQueue,
 }
 
 impl Player {
     pub fn new(x: f32, z: f32) -> Self {
         Player {
             state: PlayerState::spawn(x, z),
-            inp_queue: PlayerInpQueue::new(),
+            intent_queue: PlayerIntentQueue::new(),
         }
     }
 }
