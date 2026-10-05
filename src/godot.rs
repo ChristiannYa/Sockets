@@ -1,4 +1,5 @@
 mod codec;
+mod intent;
 mod rel;
 
 use godot::prelude::{ExtensionLibrary, gdextension};
