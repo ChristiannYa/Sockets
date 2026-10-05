@@ -25,21 +25,26 @@ impl Players {
     }
 
     pub fn tick(&mut self) {
-        for player in self.hm.values_mut() {
+        self.tick_ct = self.tick_ct.wrapping_add(1);
+
+        for (sid, player) in self.hm.iter_mut() {
+            let before = player.intent_queue.simed_seq().0;
             let sim_intent = player.intent_queue.next();
             Step::new(&mut player.state, &sim_intent).run();
-        }
+            let after = player.intent_queue.simed_seq().0;
 
-        // @TODO: remove once the sim is verified
-        self.tick_ct = self.tick_ct.wrapping_add(1);
-        if self.tick_ct % 60 == 60
-            && let Some((sid, player)) = self.hm.iter().next()
-        {
-            println!(
-                "sid={sid} pos={:?} simed_seq{}",
-                player.state.pos,
-                player.intent_queue.simed_seq().0
-            )
+            // @TODO: remove once the sim intent is verified
+            if after != before {
+                println!(
+                    "tick={} sid={sid} simed_seq={after} pos={:?}",
+                    self.tick_ct, player.state.pos
+                );
+            } else if self.tick_ct.is_multiple_of(60) {
+                println!(
+                    "tick={} sid={sid} idle-simed_seq={after} pos={:?}",
+                    self.tick_ct, player.state.pos
+                )
+            }
         }
     }
 }
