@@ -2,6 +2,7 @@ mod intent_queue;
 
 use crate::world::player::intent_queue::PlayerIntentQueue;
 use bitp::{
+    logt,
     sim::{PlayerIntentSim, PlayerState, Step},
     util::Seq,
 };
@@ -35,14 +36,16 @@ impl Players {
 
             // @TODO: remove once the sim intent is verified
             if after != before {
-                println!(
+                logt!(
                     "tick={} sid={sid} simed_seq={after} pos={:?}",
-                    self.tick_ct, player.state.pos
+                    self.tick_ct,
+                    player.state.pos
                 );
             } else if self.tick_ct.is_multiple_of(60) {
-                println!(
+                logt!(
                     "tick={} sid={sid} idle-simed_seq={after} pos={:?}",
-                    self.tick_ct, player.state.pos
+                    self.tick_ct,
+                    player.state.pos
                 )
             }
         }
