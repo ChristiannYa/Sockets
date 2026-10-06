@@ -1,4 +1,8 @@
 mod fixed_pt;
-pub mod hsv;
-pub mod intent;
-pub mod loc;
+mod hsv;
+mod intent;
+mod loc;
+
+pub use hsv::hsv;
+pub use intent::{MV, YAW};
+pub use loc::loc;

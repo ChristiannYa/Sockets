@@ -1,7 +1,7 @@
 use crate::manager::Manager;
 use bitp::{
     pkt::FieldName,
-    quantize::intent::{MV, YAW},
+    quantize,
     sim::{Edges, Held, PlayerIntentSim},
     util::Seq,
 };
@@ -30,12 +30,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         buf: &'i [u8],
         sid: u32,
     ) -> Self {
-        IntentPkt {
-            manager,
-            skt_src,
-            buf,
-            sid,
-        }
+        IntentPkt { manager, skt_src, buf, sid }
     }
 
     pub fn recv(&mut self) {
@@ -71,15 +66,13 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         let seq = reader.read(&FieldName::IntentSeq) as u8;
 
         let held = Held {
-            mv_x: MV.decode(reader.read(&FieldName::IntentMvX)),
-            mv_z: MV.decode(reader.read(&FieldName::IntentMvZ)),
-            yaw: YAW.decode(reader.read(&FieldName::IntentYaw)),
+            mv_x: quantize::MV.decode(reader.read(&FieldName::IntentMvX)),
+            mv_z: quantize::MV.decode(reader.read(&FieldName::IntentMvZ)),
+            yaw: quantize::YAW.decode(reader.read(&FieldName::IntentYaw)),
             crouch: reader.read(&FieldName::IntentCrouch) == 1,
         };
 
-        let edges = Edges {
-            jump: reader.read(&FieldName::IntentJump) == 1,
-        };
+        let edges = Edges { jump: reader.read(&FieldName::IntentJump) == 1 };
 
         Some((Seq(seq), PlayerIntentSim::new(held, edges)))
     }

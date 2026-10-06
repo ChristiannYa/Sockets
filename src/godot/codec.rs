@@ -2,7 +2,7 @@ use crate::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     intent,
     pkt::{FIELD_LENGTHS, PacketKind},
-    quantize::{hsv::hsv_codec, loc::loc_codec},
+    quantize,
     sim::{Edges, Held, PlayerIntentSim},
 };
 use godot::{
@@ -102,13 +102,13 @@ impl UdpCodec {
 
     #[func]
     fn decode_loc(&self, x: u32, z: u32) -> Vector3 {
-        let codec = loc_codec(&self.schema);
+        let codec = quantize::loc(&self.schema);
         Vector3::new(codec.x.decode(x), 0.0, codec.z.decode(z))
     }
 
     #[func]
     fn decode_hsv(&self, h: u32, s: u32, v: u32) -> Color {
-        let codec = hsv_codec(&self.schema);
+        let codec = quantize::hsv(&self.schema);
         Color::from_hsv(
             codec.h.decode(h) as f64,
             codec.s.decode(s) as f64,

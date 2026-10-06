@@ -10,7 +10,7 @@ pub struct HsvCodec {
     pub v: FixedPoint,
 }
 
-pub fn hsv_codec(schema: &PacketSchema) -> HsvCodec {
+pub fn hsv(schema: &PacketSchema) -> HsvCodec {
     let fixed_pt = |field_name: &FieldName| {
         let field = schema.info_of(field_name);
         let bits_max_val = mask(&field.len) as f32;

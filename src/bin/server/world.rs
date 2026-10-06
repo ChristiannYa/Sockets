@@ -11,7 +11,7 @@ use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
     logt,
     pkt::FieldName,
-    quantize::{hsv::hsv_codec, loc::loc_codec},
+    quantize,
     rel::retx::PendingPacket,
 };
 use std::{net::SocketAddr, time::Instant};
@@ -44,21 +44,25 @@ impl<'w> World<'w> {
     /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
     /// [FieldName::DevIsNewPlayer]
     pub fn welcome_buf(&self, rel_target: &mut RelTarget) -> Vec<u8> {
-        let (buf, _) = self.rel_track(&[(FieldName::DevIsNewPlayer, 1)], rel_target);
+        let (buf, _) =
+            self.rel_track(&[(FieldName::DevIsNewPlayer, 1)], rel_target);
         buf
     }
 
     /// Spawns player in the simulation
     /// Returns a reliable buffer along with its id containing essential spawn
     /// information (location and color)
-    pub fn spawn_player(&mut self, rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
+    pub fn spawn_player(
+        &mut self,
+        rel_target: &mut RelTarget,
+    ) -> (Vec<u8>, u8) {
         let (spawn_pt, spawn_pt_codec) = (
             logic::spawn::player_spawn_pt(),
-            loc_codec(self.codec.schema()),
+            quantize::loc(self.codec.schema()),
         );
         let (hsv, hsv_codec) = (
             logic::color::hsv(),
-            hsv_codec(self.codec.schema()), //
+            quantize::hsv(self.codec.schema()), //
         );
 
         let (enc_x, enc_z) = (
@@ -75,7 +79,8 @@ impl<'w> World<'w> {
         ];
 
         for (field_name, val) in fields.iter() {
-            self.state.save(field_name, rel_target.sid, *val)
+            self.state
+                .save(field_name, rel_target.sid, *val)
         }
 
         self.players.spawn(
@@ -87,7 +92,11 @@ impl<'w> World<'w> {
         self.rel_track(&fields, rel_target)
     }
 
-    fn rel_track(&self, fields: &[(FieldName, u32)], rel_target: &mut RelTarget) -> (Vec<u8>, u8) {
+    fn rel_track(
+        &self,
+        fields: &[(FieldName, u32)],
+        rel_target: &mut RelTarget,
+    ) -> (Vec<u8>, u8) {
         let id = self.codec.next_pkt_id();
         let buf = self.codec.headful_pack(FieldsPack {
             id: Some(id),
@@ -105,9 +114,16 @@ impl<'w> World<'w> {
 
     /// Reads every field out of `buf`, echoing each one into a new packet for
     /// the broadcast buffer
-    pub fn decode(&mut self, sid: u32, reader: &mut BitReader, writer: &mut BitWriter) -> Vec<u8> {
+    pub fn decode(
+        &mut self,
+        sid: u32,
+        reader: &mut BitReader,
+        writer: &mut BitWriter,
+    ) -> Vec<u8> {
         for (field_name, _) in self.codec.schema().fields.iter() {
-            if !reader.isset(field_name) || *field_name == FieldName::DevPacketId {
+            if !reader.isset(field_name)
+                || *field_name == FieldName::DevPacketId
+            {
                 continue;
             };
 
@@ -173,7 +189,5 @@ impl<'w> World<'w> {
         buf
     }
 
-    pub fn has_state(&self) -> bool {
-        !self.state.world.is_empty()
-    }
+    pub fn has_state(&self) -> bool { !self.state.world.is_empty() }
 }

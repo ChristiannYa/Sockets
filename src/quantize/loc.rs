@@ -7,7 +7,7 @@ pub struct LocCodec {
     pub z: FixedPoint,
 }
 
-pub fn loc_codec(schema: &PacketSchema) -> LocCodec {
+pub fn loc(schema: &PacketSchema) -> LocCodec {
     let fixed_pt = |field_name: &FieldName| {
         let bits_len = schema.info_of(field_name).len;
         let offset = 1u32 << (bits_len - 1); // half of 2^bits_len

@@ -19,7 +19,12 @@ impl Players {
         self.hm.insert(sid, Player::new(x, z));
     }
 
-    pub fn queue_intent(&mut self, sid: u32, seq: Seq, sim_intent: PlayerIntentSim) {
+    pub fn queue_intent(
+        &mut self,
+        sid: u32,
+        seq: Seq,
+        sim_intent: PlayerIntentSim,
+    ) {
         if let Some(player) = self.hm.get_mut(&sid) {
             player.intent_queue.queue(seq, sim_intent);
         }
