@@ -33,6 +33,7 @@ use bitp::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     intent, logt,
     pkt::{FIELD_LENGTHS, FieldName, PacketKind},
+    quantize,
     sim::{Edges, Held, PlayerIntentSim},
 };
 
@@ -125,6 +126,8 @@ fn spawn_recv_thread(skt: &UdpSocket, schema: &PacketSchema) {
         let mut buf = [0u8; 1024];
 
         let mut snaps = 1;
+        let loc_qua = quantize::loc(&schema);
+
         loop {
             let Ok((skt_buf_len, skt_src)) = skt.recv_from(&mut buf) else {
                 return;
@@ -186,10 +189,19 @@ fn spawn_recv_thread(skt: &UdpSocket, schema: &PacketSchema) {
                         let mut fields = Vec::new();
                         for (name, _) in schema.fields.iter() {
                             if reader.isset(name) {
-                                fields.push(format!(
-                                    "{name:?}={}",
-                                    reader.read(name)
-                                ));
+                                let val = reader.read(name);
+                                let shown = match name {
+                                    FieldName::LocationX => format!(
+                                        "{val} ({:.1})",
+                                        loc_qua.x.decode(val)
+                                    ),
+                                    FieldName::LocationZ => format!(
+                                        "{val} ({:.1})",
+                                        loc_qua.z.decode(val)
+                                    ),
+                                    _ => val.to_string(),
+                                };
+                                fields.push(format!("{name:?}={shown}"));
                             }
                         }
                         if snaps % 30 == 0 {
