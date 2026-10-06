@@ -102,7 +102,6 @@ fn main() {
             send(0.0);
             thread::sleep(Duration::from_millis(300));
         }
-        other => logt!("unknown mode '{other}' (use hold|burst)"),
         "stale" => {
             // Out-of-order and dup seqs. Only 5 and 6 should be accepted: 3
             // is older than 5, and the 2nd 5 is a repeat
@@ -113,6 +112,7 @@ fn main() {
             send_seq(7, 0.0); // stop the player
             thread::sleep(Duration::from_millis(300));
         }
+        other => logt!("unknown mode '{other}' (use hold|burst)"),
     }
 
     logt!("done");
