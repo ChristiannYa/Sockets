@@ -7,7 +7,11 @@ use crate::{
 
 /// No sid: Obtained internally using the client's address.
 /// No packet id: It is not reliable.
-pub fn encode(schema: &PacketSchema, seq: u8, intent: &PlayerIntentSim) -> Vec<u8> {
+pub fn encode(
+    schema: &PacketSchema,
+    seq: u8,
+    intent: &PlayerIntentSim,
+) -> Vec<u8> {
     let mut writer = BitWriter::new(schema);
     writer.write(&FieldName::IntentSeq, &(seq as u32));
     writer.write(&FieldName::IntentMvX, &MV.encode(intent.held.mv_x));

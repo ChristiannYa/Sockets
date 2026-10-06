@@ -8,11 +8,7 @@ pub struct FixedPoint {
 
 impl FixedPoint {
     pub const fn new(step: f32, offset: u32, bits_len: usize) -> Self {
-        FixedPoint {
-            step,
-            offset,
-            bits_len,
-        }
+        FixedPoint { step, offset, bits_len }
     }
 
     pub fn encode(&self, val: f32) -> u32 {
