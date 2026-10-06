@@ -13,6 +13,11 @@
 //!                  queue holds at most 8 (QUEUE_MAX): with burst_n > 8 the
 //!                  oldest are dropped and the first consumed seq is
 //!                  burst_n - 7.
+//! stale:           join, then seqs 5, 3, 5, 6 in the same instant (3 is
+//!                  older, the second 5 is a duplicate), 1s of silence, then
+//!                  seq 7 with zeros to stop the player.
+//!                  Server log: only simed_seq=5 and simed_seq=6, then
+//!                  simed_seq=7 about a second later.
 //!
 //! The client only sends (and acks the server's reliable replies, so the
 //! server stops retrying). Verification happens in the server logs.
@@ -50,8 +55,7 @@ fn main() {
     logt!("join sent, waiting 500ms for registration/spawn");
     thread::sleep(Duration::from_millis(500));
 
-    let mut seq: u8 = 1;
-    let mut send = |mv_z: f32| {
+    let send_seq = |seq: u8, mv_z: f32| {
         skt.send_to(
             &intent_pkt(
                 &schema,
@@ -69,6 +73,11 @@ fn main() {
             &server,
         )
         .expect("send failed");
+    };
+
+    let mut seq: u8 = 1;
+    let mut send = |mv_z: f32| {
+        send_seq(seq, mv_z);
         seq = seq.wrapping_add(1);
     };
 
@@ -94,6 +103,16 @@ fn main() {
             thread::sleep(Duration::from_millis(300));
         }
         other => logt!("unknown mode '{other}' (use hold|burst)"),
+        "stale" => {
+            // Out-of-order and dup seqs. Only 5 and 6 should be accepted: 3
+            // is older than 5, and the 2nd 5 is a repeat
+            for seq in [5, 3, 5, 6] {
+                send_seq(seq, -1.0);
+            }
+            thread::sleep(Duration::from_secs(1));
+            send_seq(7, 0.0); // stop the player
+            thread::sleep(Duration::from_millis(300));
+        }
     }
 
     logt!("done");
