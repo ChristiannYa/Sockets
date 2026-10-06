@@ -55,6 +55,10 @@ impl Players {
             }
         }
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&u32, &Player)> {
+        self.hm.iter()
+    }
 }
 
 pub struct Player {

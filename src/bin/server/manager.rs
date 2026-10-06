@@ -39,9 +39,7 @@ impl<'c, 'w> Manager<'c, 'w> {
         }
     }
 
-    pub fn retry(&mut self) {
-        retry::retry(self);
-    }
+    pub fn retry(&mut self) { retry::retry(self); }
 
     pub fn recv_cli(&mut self, buf: &[u8], skt_src: SocketAddr) {
         recv::buf(self, buf, skt_src);
@@ -49,5 +47,12 @@ impl<'c, 'w> Manager<'c, 'w> {
 
     pub fn sim_tick(&mut self) {
         self.world.players.tick();
+        if let Some(buf) = self.world.players_snapshot_buf() {
+            self.net.broadcast(crate::net::Broadcast {
+                addrs: self.sess.addrs(),
+                skt_src: None,
+                buf: &buf,
+            });
+        }
     }
 }

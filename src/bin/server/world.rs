@@ -156,12 +156,11 @@ impl<'w> World<'w> {
     /// return [record_count, record1, record2].concat()
     /// ```
     pub fn sync_buf(&self, sid: u32) -> Vec<u8> {
-        let records: Vec<Vec<u8>> = self
-            .state
+        self.state
             .world
             .iter()
             .filter(|(sid_iter, _)| **sid_iter != sid)
-            .map(|(sid, player_state)| {
+            .flat_map(|(sid, player_state)| {
                 let mut fields = Vec::<(FieldName, u32)>::new();
 
                 for (field_name, _) in self.codec.schema().fields.iter() {
@@ -176,16 +175,42 @@ impl<'w> World<'w> {
                     sid: *sid,
                 })
             })
+            .collect()
+    }
+
+    pub fn players_snapshot_buf(&self) -> Option<Vec<u8>> {
+        let loc_qua = quantize::loc(self.codec.schema());
+
+        let records: Vec<Vec<u8>> = self
+            .players
+            .iter()
+            .map(|(sid, player)| {
+                let [x, _, z] = player.state.pos;
+                self.codec.headless_pack(FieldsPack {
+                    id: None,
+                    fields: &[
+                        (FieldName::LocationX, loc_qua.x.encode(x)),
+                        (FieldName::LocationZ, loc_qua.z.encode(z)),
+                    ],
+                    sid: *sid,
+                })
+            })
             .collect();
 
-        let mut buf = self.codec.header_buf(DecodeType::Batch);
+        if records.is_empty() {
+            return None;
+        }
 
+        Some(self.batch_pack(records))
+    }
+
+    fn batch_pack(&self, records: Vec<Vec<u8>>) -> Vec<u8> {
+        let mut buf = self.codec.header_buf(DecodeType::Batch);
         buf.push(records.len() as u8);
         for record in records {
             buf.push(record.len() as u8);
             buf.extend(record);
         }
-
         buf
     }
 

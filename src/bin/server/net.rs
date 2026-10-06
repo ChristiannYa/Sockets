@@ -14,7 +14,7 @@ where
     I: Iterator<Item = &'a SocketAddr>,
 {
     pub addrs: I,
-    pub skt_src: &'a SocketAddr,
+    pub skt_src: Option<&'a SocketAddr>,
     pub buf: &'a [u8],
 }
 
@@ -26,7 +26,9 @@ impl Net {
     }
 
     pub fn try_clone_skt(&self) -> UdpSocket {
-        self.skt.try_clone().expect("Couldn't clone socket")
+        self.skt
+            .try_clone()
+            .expect("Couldn't clone socket")
     }
 
     /// Sends data on the socket to the given address
@@ -39,11 +41,10 @@ impl Net {
     where
         I: Iterator<Item = &'a SocketAddr>,
     {
-        for addr in args.addrs {
-            if *addr != *args.skt_src {
-                self.skt.send_to(args.buf, addr).ok();
-            }
-        }
+        let buf = args.buf;
+        self.on_broadcast(args, |addr| {
+            self.send_to(buf, *addr);
+        });
     }
 
     /// Sends `buf` to every address except `skt_src`, tracking a
@@ -58,16 +59,32 @@ impl Net {
         I: Iterator<Item = &'a SocketAddr>,
     {
         let now = Instant::now();
-        for addr in args.addrs {
-            if *addr == *args.skt_src {
-                continue;
-            }
+        let buf = args.buf;
 
-            self.send_to(args.buf, *addr);
+        self.on_broadcast(args, |addr| {
+            self.send_to(buf, *addr);
             pending_pkts.insert(
                 (pkt_id, *addr),
-                PendingPacket::new(pkt_id, args.buf.to_vec(), now),
+                PendingPacket::new(pkt_id, buf.to_vec(), now),
             );
+        });
+    }
+
+    fn on_broadcast<'f, I, H>(&self, args: Broadcast<'f, I>, mut handle: H)
+    where
+        I: Iterator<Item = &'f SocketAddr>,
+        H: FnMut(&SocketAddr),
+    {
+        if let Some(skt_src) = args.skt_src {
+            for addr in args.addrs {
+                if *addr != *skt_src {
+                    handle(addr);
+                }
+            }
+        } else {
+            for addr in args.addrs {
+                handle(addr);
+            }
         }
     }
 }

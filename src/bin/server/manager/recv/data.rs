@@ -9,16 +9,21 @@ pub struct DataPkt<'d, 'c, 'w> {
 }
 
 impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
-    pub fn new(manager: &'d mut Manager<'c, 'w>, skt_src: SocketAddr, buf: &'d [u8]) -> Self {
-        DataPkt {
-            manager,
-            skt_src,
-            buf,
-        }
+    pub fn new(
+        manager: &'d mut Manager<'c, 'w>,
+        skt_src: SocketAddr,
+        buf: &'d [u8],
+    ) -> Self {
+        DataPkt { manager, skt_src, buf }
     }
 
     pub fn recv(&mut self) {
-        if !self.manager.codec.schema().mask_fits(self.buf) {
+        if !self
+            .manager
+            .codec
+            .schema()
+            .mask_fits(self.buf)
+        {
             return;
         }
 
@@ -53,18 +58,22 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
         };
 
         let welcome_buf = self.manager.world.welcome_buf(&mut rel_targ);
-        self.manager.net.send_to(&welcome_buf, self.skt_src);
+        self.manager
+            .net
+            .send_to(&welcome_buf, self.skt_src);
 
         // Capture world state before spawning player and saving its state in
         // the world/session
         let is_world_stateful = self.manager.world.has_state();
 
         let (spawn_buf, sb_id) = self.manager.world.spawn_player(&mut rel_targ);
-        self.manager.net.send_to(&spawn_buf, self.skt_src);
+        self.manager
+            .net
+            .send_to(&spawn_buf, self.skt_src);
         self.manager.net.broadcast_rel(
             Broadcast {
                 addrs: self.manager.sess.addrs(),
-                skt_src: &self.skt_src,
+                skt_src: Some(&self.skt_src),
                 buf: &spawn_buf,
             },
             sb_id,
@@ -80,18 +89,29 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
 
     /// Returns `true` if the packet is a duplicate that the caller should drop.
     fn is_dup(&mut self, inid: u8) -> bool {
-        if self.manager.addrs_seen_pkt_ids.is_seen(&self.skt_src, inid) {
+        if self
+            .manager
+            .addrs_seen_pkt_ids
+            .is_seen(&self.skt_src, inid)
+        {
             return true;
         }
 
-        self.manager
-            .addrs_seen_pkt_ids
-            .mark_seen(&self.skt_src, inid, Instant::now());
+        self.manager.addrs_seen_pkt_ids.mark_seen(
+            &self.skt_src,
+            inid,
+            Instant::now(),
+        );
 
         false
     }
 
-    fn out(&mut self, sid: u32, outid: Option<u8>, reader: &mut bitp::bits::BitReader) {
+    fn out(
+        &mut self,
+        sid: u32,
+        outid: Option<u8>,
+        reader: &mut bitp::bits::BitReader,
+    ) {
         let mut writer = self.manager.codec.writer();
         self.manager.codec.seed_pkt(
             &mut writer,
@@ -102,18 +122,22 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             ),
         );
 
-        let world_buf = self.manager.world.decode(sid, reader, &mut writer);
+        let world_buf = self
+            .manager
+            .world
+            .decode(sid, reader, &mut writer);
 
         Broadcast {
             addrs: self.manager.sess.addrs(),
-            skt_src: &self.skt_src,
+            skt_src: Some(&self.skt_src),
             buf: &world_buf,
         }
         .pipe(|args| match outid {
-            Some(outid) => self
-                .manager
-                .net
-                .broadcast_rel(args, outid, self.manager.pending_pkts),
+            Some(outid) => self.manager.net.broadcast_rel(
+                args,
+                outid,
+                self.manager.pending_pkts,
+            ),
             None => self.manager.net.broadcast(args),
         });
     }
