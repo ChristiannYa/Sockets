@@ -42,7 +42,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             }
         }
 
-        self.ship(sid, outid, &mut reader);
+        self.out(sid, outid, &mut reader);
     }
 
     fn spawn_new_cli(&mut self, sid: u32) {
@@ -91,7 +91,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
         false
     }
 
-    fn ship(&mut self, sid: u32, outid: Option<u8>, reader: &mut bitp::bits::BitReader) {
+    fn out(&mut self, sid: u32, outid: Option<u8>, reader: &mut bitp::bits::BitReader) {
         let mut writer = self.manager.codec.writer();
         self.manager.codec.seed_pkt(
             &mut writer,
@@ -102,7 +102,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             ),
         );
 
-        let world_buf = self.manager.world.process(sid, reader, &mut writer);
+        let world_buf = self.manager.world.decode(sid, reader, &mut writer);
 
         Broadcast {
             addrs: self.manager.sess.addrs(),

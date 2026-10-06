@@ -39,7 +39,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
     }
 
     pub fn recv(&mut self) {
-        let Some((seq, sim_intent)) = self.intent() else {
+        let Some((seq, sim_intent)) = self.decode() else {
             return;
         };
         self.manager
@@ -48,7 +48,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
             .queue_intent(self.sid, seq, sim_intent);
     }
 
-    fn intent(&self) -> Option<(Seq, PlayerIntentSim)> {
+    fn decode(&self) -> Option<(Seq, PlayerIntentSim)> {
         let schema = self.manager.codec.schema();
 
         let payload_ceil_len = INTENT_FIELDS

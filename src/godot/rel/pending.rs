@@ -1,15 +1,11 @@
-use std::{collections::HashMap, time::Instant};
-
-use godot::prelude::{Array, Gd, GodotClass, PackedByteArray, godot_api};
-
 use crate::rel::retx::{PendingPacket, RetryAction};
-
-type PendingPackets = HashMap<u8, PendingPacket>;
+use godot::prelude::{Array, Gd, GodotClass, PackedByteArray, godot_api};
+use std::{collections::HashMap, time::Instant};
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
 pub struct UdpPending {
-    pkts: PendingPackets,
+    pkts: HashMap<u8, PendingPacket>,
     next_id: u8,
 }
 
@@ -18,7 +14,7 @@ impl UdpPending {
     #[func]
     fn create() -> Gd<Self> {
         Gd::from_init_fn(|_| Self {
-            pkts: PendingPackets::new(),
+            pkts: HashMap::new(),
             next_id: 0,
         })
     }

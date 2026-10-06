@@ -105,7 +105,7 @@ impl<'w> World<'w> {
 
     /// Reads every field out of `buf`, echoing each one into a new packet for
     /// the broadcast buffer
-    pub fn process(&mut self, sid: u32, reader: &mut BitReader, writer: &mut BitWriter) -> Vec<u8> {
+    pub fn decode(&mut self, sid: u32, reader: &mut BitReader, writer: &mut BitWriter) -> Vec<u8> {
         for (field_name, _) in self.codec.schema().fields.iter() {
             if !reader.isset(field_name) || *field_name == FieldName::DevPacketId {
                 continue;

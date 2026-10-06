@@ -1,4 +1,5 @@
 pub mod bits;
+pub mod intent;
 pub mod pkt;
 pub mod quantize;
 pub mod rel;

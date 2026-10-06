@@ -1,12 +1,15 @@
 use crate::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
+    intent,
     pkt::{FIELD_LENGTHS, PacketKind},
     quantize::{hsv::hsv_codec, loc::loc_codec},
+    sim::{Edges, Held, PlayerIntentSim},
 };
 use godot::{
     meta::ToGodot,
     prelude::{
-        Color, Gd, GodotClass, PackedByteArray, VarArray, VarDictionary, Vector3, godot_api,
+        Color, Gd, GodotClass, PackedByteArray, VarArray, VarDictionary,
+        Vector3, godot_api,
     },
 };
 
@@ -85,7 +88,10 @@ impl UdpCodec {
             let mut dict = VarDictionary::new();
             for (field_name, _) in self.schema.fields.iter() {
                 if reader.isset(field_name) {
-                    dict.set(format!("{field_name:?}"), reader.read(field_name));
+                    dict.set(
+                        format!("{field_name:?}"),
+                        reader.read(field_name),
+                    );
                 }
             }
             buf_out.push(&dict.to_variant());
@@ -124,5 +130,22 @@ impl UdpCodec {
         let mut buf = vec![PacketKind::Data as u8, DecodeType::Single as u8];
         buf.extend(writer.buf());
         PackedByteArray::from(buf.as_slice())
+    }
+
+    #[func]
+    fn encode_intent(
+        &self,
+        seq: u8,
+        mv_x: f32,
+        mv_z: f32,
+        yaw: f32,
+        crouch: bool,
+        jump: bool,
+    ) -> PackedByteArray {
+        let intent = PlayerIntentSim {
+            held: Held { mv_x, mv_z, yaw, crouch },
+            edges: Edges { jump },
+        };
+        PackedByteArray::from(intent::encode(&self.schema, seq, &intent))
     }
 }
