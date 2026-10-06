@@ -1,7 +1,5 @@
-use tap::Pipe;
-
 use crate::{
-    bits::{PacketSchema, codec::prog::BufferProgress, utils::mask},
+    bits::{PacketSchema, utils::mask},
     pkt::FieldName,
 };
 
@@ -25,38 +23,22 @@ impl<'s, 'b> BitReader<'s, 'b> {
 
     pub fn read(&mut self, field_name: &FieldName) -> u32 {
         let field = self.packet_schema.info_of(field_name);
+        let mut val: u32 = 0;
+        let mut bits_read = 0;
 
-        BufferProgress::calc(self.bits_acc, &field.len).pipe(|prog| {
-            if prog.ovf_len > 0 {
-                self.read_ovf(&prog)
-            } else {
-                self.bits_acc += field.len;
-                ((self.buf[prog.ind] >> prog.ofs) as u32) & mask(&field.len)
-            }
-        })
-    }
+        while bits_read < field.len {
+            let ind = self.bits_acc / 8;
+            let ofs = self.bits_acc % 8;
+            let take = (8 - ofs).min(field.len - bits_read);
 
-    fn read_ovf(&mut self, prog: &BufferProgress) -> u32 {
-        let rem = ((self.buf[prog.ind] >> prog.ofs) as u32) & mask(&prog.rem_len);
-        let ovf = if prog.ovf_len > 8 { 8 } else { prog.ovf_len }
-            .pipe(|len| (self.buf[prog.ind + 1] as u32) & mask(&len));
+            let chunk = ((self.buf[ind] >> ofs) as u32) & mask(&take);
+            val |= chunk << bits_read;
 
-        let merge = (ovf << prog.rem_len) | rem;
-
-        let field_len = prog.rem_len + prog.ovf_len;
-
-        if prog.ovf_len > 8 {
-            let read_len = prog.rem_len + 8;
-
-            self.bits_acc += read_len;
-
-            let prog = (field_len - read_len).pipe(|len| BufferProgress::calc(self.bits_acc, &len));
-
-            (self.read_ovf(&prog) << read_len) | merge
-        } else {
-            self.bits_acc += field_len;
-            merge
+            bits_read += take;
+            self.bits_acc += take;
         }
+
+        val
     }
 
     pub fn isset(&self, field_name: &FieldName) -> bool {
@@ -105,27 +87,36 @@ mod tests {
 
         let field_reads: Vec<(FieldName, u32)> = field_values
             .iter()
-            .map(|(field_name, _)| ((*field_name).clone(), reader.read(field_name)))
+            .map(|(field_name, _)| {
+                ((*field_name).clone(), reader.read(field_name))
+            })
             .collect();
 
-        let all_reads_match = field_values
-            .iter()
-            .enumerate()
-            .all(|(ind, (_, field_val))| {
-                let (field_read_name, field_read_value) = &field_reads[ind];
-                let matches = *field_val == *field_read_value;
-                if !matches {
-                    log::error!("{:?}: read ({field_read_value})", field_read_name);
-                    log::error!("{:?}: orig ({field_val})", field_read_name);
-                } else {
-                    log::debug!(
-                        "{:?}: read ({field_read_value}) == orig ({})",
-                        field_read_name,
-                        field_val
-                    );
-                }
-                matches
-            });
+        let all_reads_match =
+            field_values
+                .iter()
+                .enumerate()
+                .all(|(ind, (_, field_val))| {
+                    let (field_read_name, field_read_value) = &field_reads[ind];
+                    let matches = *field_val == *field_read_value;
+                    if !matches {
+                        log::error!(
+                            "{:?}: read ({field_read_value})",
+                            field_read_name
+                        );
+                        log::error!(
+                            "{:?}: orig ({field_val})",
+                            field_read_name
+                        );
+                    } else {
+                        log::debug!(
+                            "{:?}: read ({field_read_value}) == orig ({})",
+                            field_read_name,
+                            field_val
+                        );
+                    }
+                    matches
+                });
 
         if all_reads_match {
             Ok(())
@@ -203,6 +194,29 @@ mod tests {
     }
 
     #[test]
+    fn read_super_overflow_short_tail() -> Result<(), String> {
+        // Year (11 bits) starts at bit 6: 2 bits in byte 0, 8 in byte 1, 1 in byte 2
+        let schema = PacketSchema::build(&[
+            (FieldName::Health, 3),
+            (FieldName::RocketsCount, 3),
+            (FieldName::Year, 11),
+            (FieldName::Age, 7),
+            (FieldName::IsFriendly, 1),
+        ])
+        .unwrap();
+
+        let field_values = [
+            (FieldName::Health, 5),
+            (FieldName::RocketsCount, 2),
+            (FieldName::Year, 1437),
+            (FieldName::Age, 100),
+            (FieldName::IsFriendly, 1),
+        ];
+
+        t_reads_match(&schema, &field_values)
+    }
+
+    #[test]
     fn read_misc_super_overflow_v2() -> Result<(), String> {
         let schema = PacketSchema::build(&[
             (FieldName::Health, 3),
@@ -239,6 +253,25 @@ mod tests {
     }
 
     #[test]
+    fn read_misc_spawn_packet_layout() -> Result<(), String> {
+        use crate::pkt::FIELD_LENGTHS;
+        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+
+        // Same fields, same order as the server's spawn packet
+        let field_values = [
+            (FieldName::DevSessionId, 0),
+            (FieldName::DevPacketId, 0),
+            (FieldName::LocationX, 1008),
+            (FieldName::LocationZ, 1089),
+            (FieldName::ColorH, 45),
+            (FieldName::ColorS, 5),
+            (FieldName::ColorV, 6),
+        ];
+
+        t_reads_match(&schema, &field_values)
+    }
+
+    #[test]
     fn read_schema_partial() -> Result<(), String> {
         crate::util::test::init_test_logger();
 
@@ -265,7 +298,8 @@ mod tests {
 
     #[test]
     fn read_misc_0() -> Result<(), String> {
-        let schema = PacketSchema::build(&[(FieldName::IsFriendly, 1)]).unwrap();
+        let schema =
+            PacketSchema::build(&[(FieldName::IsFriendly, 1)]).unwrap();
         let field_values = [(FieldName::IsFriendly, 0)];
 
         t_reads_match(&schema, &field_values)
