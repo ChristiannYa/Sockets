@@ -156,11 +156,12 @@ impl<'w> World<'w> {
     /// return [record_count, record1, record2].concat()
     /// ```
     pub fn sync_buf(&self, sid: u32) -> Vec<u8> {
-        self.state
+        let records: Vec<Vec<u8>> = self
+            .state
             .world
             .iter()
             .filter(|(sid_iter, _)| **sid_iter != sid)
-            .flat_map(|(sid, player_state)| {
+            .map(|(sid, player_state)| {
                 let mut fields = Vec::<(FieldName, u32)>::new();
 
                 for (field_name, _) in self.codec.schema().fields.iter() {
@@ -175,7 +176,9 @@ impl<'w> World<'w> {
                     sid: *sid,
                 })
             })
-            .collect()
+            .collect();
+
+        self.batch_pack(records)
     }
 
     pub fn players_snapshot_buf(&self) -> Option<Vec<u8>> {
