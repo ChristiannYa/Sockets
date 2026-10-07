@@ -29,11 +29,19 @@ impl Players {
     }
 
     pub fn tick(&mut self) {
+        self.step_all();
+        self.resolve_collisions()
+    }
+
+    fn step_all(&mut self) {
         for player in self.hm.values_mut() {
             let sim_intent = player.intent_queue.next();
             Step::new(&mut player.state, &sim_intent).run();
         }
+    }
 
+    fn resolve_collisions(&mut self) {
+        // Sorted by sid, because HashMap iteration order is random
         let mut states: Vec<(u32, &mut PlayerState)> = self
             .hm
             .iter_mut()
