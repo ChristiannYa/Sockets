@@ -2,8 +2,7 @@ mod intent_queue;
 
 use crate::world::player::intent_queue::PlayerIntentQueue;
 use bitp::{
-    logt,
-    sim::{PlayerIntentSim, PlayerState, Step},
+    sim::{Collision, PlayerIntentSim, PlayerState, Step},
     util::Seq,
 };
 use std::collections::HashMap;
@@ -11,7 +10,6 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct Players {
     hm: HashMap<u32, Player>,
-    tick_ct: u32,
 }
 
 impl Players {
@@ -31,29 +29,25 @@ impl Players {
     }
 
     pub fn tick(&mut self) {
-        self.tick_ct = self.tick_ct.wrapping_add(1);
-
-        for (sid, player) in self.hm.iter_mut() {
-            let before = player.intent_queue.simed_seq().0;
+        for player in self.hm.values_mut() {
             let sim_intent = player.intent_queue.next();
             Step::new(&mut player.state, &sim_intent).run();
-            let after = player.intent_queue.simed_seq().0;
-
-            // @TODO: remove once the sim intent is verified
-            if after != before {
-                logt!(
-                    "tick={} sid={sid} simed_seq={after} pos={:?}",
-                    self.tick_ct,
-                    player.state.pos
-                );
-            } else if self.tick_ct.is_multiple_of(60) {
-                logt!(
-                    "tick={} sid={sid} idle-simed_seq={after} pos={:?}",
-                    self.tick_ct,
-                    player.state.pos
-                )
-            }
         }
+
+        let mut states: Vec<(u32, &mut PlayerState)> = self
+            .hm
+            .iter_mut()
+            .map(|(sid, p)| (*sid, &mut p.state))
+            .collect();
+        states.sort_unstable_by_key(|(sid, _)| *sid);
+
+        Collision::new(
+            states
+                .into_iter()
+                .map(|(_, p_s)| p_s)
+                .collect(),
+        )
+        .resolve();
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&u32, &Player)> {

@@ -7,6 +7,7 @@ pub const CROUCH_HEIGHT: f32 = 1.0;
 
 pub const HEIGHT: f32 = 2.0;
 pub const RADIUS: f32 = 0.5;
+pub const DIAM: f32 = 2.0 * RADIUS;
 
 /// Fixed simulation stpe, shared by server and client prediction
 pub const TICK_DT: f32 = 1.0 / 60.0;
