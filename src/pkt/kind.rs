@@ -3,6 +3,7 @@ pub enum PacketKind {
     Data,
     Ack,
     Intent,
+    Snapshot,
 }
 
 impl TryFrom<u8> for PacketKind {

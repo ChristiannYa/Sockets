@@ -37,10 +37,10 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         let Some((seq, sim_intent)) = self.decode() else {
             return;
         };
+
         self.manager
             .world
-            .players
-            .queue_intent(self.sid, seq, sim_intent);
+            .queue_player_intent(self.sid, seq, sim_intent);
     }
 
     fn decode(&self) -> Option<(Seq, PlayerIntentSim)> {

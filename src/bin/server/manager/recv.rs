@@ -9,12 +9,18 @@ use bitp::pkt::PacketKind;
 use std::net::SocketAddr;
 
 pub fn buf(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
-    let Some(&kind) = buf.first() else { return };
+    let Some(&kind) = buf.first() else {
+        return;
+    };
 
     match PacketKind::try_from(kind) {
         Ok(PacketKind::Ack) => {
             if let Some(id) = bitp::rel::ack::decode(buf) {
-                crate::rel::ack::handle_ack(manager.pending_pkts, id, &skt_src);
+                crate::rel::ack::handle_ack(
+                    manager.pending_pkts,
+                    id,
+                    &skt_src,
+                );
             }
         }
         Ok(PacketKind::Data) => {
@@ -30,6 +36,6 @@ pub fn buf(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
                 IntentPkt::new(manager, skt_src, buf, sid).recv();
             }
         }
-        Err(()) => {}
+        Ok(PacketKind::Snapshot) | Err(()) => {}
     }
 }

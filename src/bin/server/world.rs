@@ -13,6 +13,8 @@ use bitp::{
     pkt::FieldName,
     quantize,
     rel::retx::PendingPacket,
+    sim::PlayerIntentSim,
+    util::Seq,
 };
 use std::{net::SocketAddr, time::Instant};
 
@@ -24,11 +26,13 @@ pub struct RelTarget<'r> {
 }
 
 pub struct World<'w> {
+    tick_ct: u16,
+
     /// Legacy relay, will be deprecated in the future
     state: WorldState,
 
     codec: &'w Codec,
-    pub players: Players,
+    players: Players,
 }
 
 impl<'w> World<'w> {
@@ -37,7 +41,25 @@ impl<'w> World<'w> {
             state: WorldState::new(),
             codec,
             players: Players::default(),
+            tick_ct: 0,
         }
+    }
+
+    /// Advances the simulation by 1 tick
+    pub fn tick(&mut self) {
+        self.tick_ct = self.tick_ct.wrapping_add(1);
+        self.players.tick();
+    }
+
+    pub fn tick_ct(&self) -> u16 { self.tick_ct }
+
+    pub fn queue_player_intent(
+        &mut self,
+        sid: u32,
+        seq: Seq,
+        intent: PlayerIntentSim,
+    ) {
+        self.players.queue_intent(sid, seq, intent)
     }
 
     /// Returns a reliable buffer with the [FieldName::DevIsNewPlayer] flag
@@ -204,12 +226,27 @@ impl<'w> World<'w> {
             return None;
         }
 
-        Some(self.batch_pack(records))
+        Some(self.snapshot_pack(records))
     }
 
+    /// `[Data, Batch]` + [World::records_buf]
     fn batch_pack(&self, records: Vec<Vec<u8>>) -> Vec<u8> {
         let mut buf = self.codec.header_buf(DecodeType::Batch);
-        buf.push(records.len() as u8);
+        buf.extend(Self::records_buf(records));
+        buf
+    }
+
+    /// `[Snapshot, tick_lo, tick_hi]` + [World::records_buf]
+    fn snapshot_pack(&self, records: Vec<Vec<u8>>) -> Vec<u8> {
+        let mut buf = self.codec.snapshot_header_buf(self.tick_ct);
+        buf.extend(Self::records_buf(records));
+        buf
+    }
+
+    /// `[record_ct, (record_len, record)...]`, shared by every packet that
+    /// carries records
+    fn records_buf(records: Vec<Vec<u8>>) -> Vec<u8> {
+        let mut buf = vec![records.len() as u8];
         for record in records {
             buf.push(record.len() as u8);
             buf.extend(record);

@@ -27,6 +27,8 @@ impl UdpCodec {
     const PKT_ACK: u8 = PacketKind::Ack as u8;
     #[constant]
     const PKT_INTENT: u8 = PacketKind::Intent as u8;
+    #[constant]
+    const PKT_SNAPSHOT: u8 = PacketKind::Snapshot as u8;
 
     #[constant]
     const DEC_SINGLE: u8 = DecodeType::Single as u8;
@@ -61,43 +63,33 @@ impl UdpCodec {
 
     #[func]
     fn decode_batch(&self, buf: PackedByteArray) -> VarArray {
-        let mut buf_out = VarArray::new();
-
         // Strip [PacketType, DecodeType] before the record-count byte
         let Some(bytes) = buf.as_slice().get(2..) else {
-            return buf_out;
+            return VarArray::new();
+        };
+        self.decode_records(bytes)
+    }
+
+    /// Returns `{ "tick": int, "records": Array }`, or an empty dictionary
+    /// when the packet is too short to hold the header
+    #[func]
+    fn decode_snapshot(&self, buf: PackedByteArray) -> VarDictionary {
+        let mut out = VarDictionary::new();
+
+        // [PacketKind::Snapshot, tick_lo, tick_hi] + records buf
+        let bytes = buf.as_slice();
+        let (Some(&lo), Some(&hi), Some(records)) =
+            (bytes.get(1), bytes.get(2), bytes.get(3..))
+        else {
+            return out;
         };
 
-        let Some((&record_count, mut records)) = bytes.split_first() else {
-            return buf_out; // Empty packet, nothing to decode
-        };
-
-        for _ in 0..record_count {
-            let Some((&record_len, rem)) = records.split_first() else {
-                break;
-            };
-            let record_len = record_len as usize;
-            if rem.len() < record_len {
-                break;
-            }
-
-            let (buf, rem) = rem.split_at(record_len);
-            records = rem;
-
-            let mut reader = BitReader::new(&self.schema, buf);
-            let mut dict = VarDictionary::new();
-            for (field_name, _) in self.schema.fields.iter() {
-                if reader.isset(field_name) {
-                    dict.set(
-                        format!("{field_name:?}"),
-                        reader.read(field_name),
-                    );
-                }
-            }
-            buf_out.push(&dict.to_variant());
-        }
-
-        buf_out
+        out.set("tick".to_string(), u16::from_le_bytes([lo, hi]) as u32);
+        out.set(
+            "records".to_string(),
+            &self.decode_records(records).to_variant(),
+        );
+        out
     }
 
     #[func]
@@ -147,5 +139,42 @@ impl UdpCodec {
             edges: Edges { jump },
         };
         PackedByteArray::from(intent::encode(&self.schema, seq, &intent))
+    }
+}
+
+impl UdpCodec {
+    fn decode_records(&self, bytes: &[u8]) -> VarArray {
+        let mut buf_out = VarArray::new();
+
+        let Some((&record_count, mut records)) = bytes.split_first() else {
+            return buf_out; // Empty packet, nothing to decode
+        };
+
+        for _ in 0..record_count {
+            let Some((&record_len, rem)) = records.split_first() else {
+                break;
+            };
+            let record_len = record_len as usize;
+            if rem.len() < record_len {
+                break;
+            }
+
+            let (buf, rem) = rem.split_at(record_len);
+            records = rem;
+
+            let mut reader = BitReader::new(&self.schema, buf);
+            let mut dict = VarDictionary::new();
+            for (field_name, _) in self.schema.fields.iter() {
+                if reader.isset(field_name) {
+                    dict.set(
+                        format!("{field_name:?}"),
+                        reader.read(field_name),
+                    );
+                }
+            }
+            buf_out.push(&dict.to_variant());
+        }
+
+        buf_out
     }
 }
