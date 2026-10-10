@@ -47,6 +47,12 @@ pub fn spawn(skt: UdpSocket) -> Receiver<(Instant, Event)> {
         let mut next: Instant = Instant::now() + SIM_TICK_INTV;
         loop {
             thread::sleep(next.saturating_duration_since(Instant::now()));
+
+            let late = Instant::now().saturating_duration_since(next);
+            if late.as_millis() >= 2 {
+                eprintln!("tick thread late by {late:?}");
+            }
+
             if tx_tick
                 .send((Instant::now(), Event::SimTick))
                 .is_err()
