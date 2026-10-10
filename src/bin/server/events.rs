@@ -16,8 +16,8 @@ const SIM_TICK_INTV: Duration = Duration::from_micros(16_667);
 
 /// Spawns the receive, sim tick, and retry interval threads, returning a
 /// channel that yields [Event] for the main thread to consume
-pub fn spawn(skt: UdpSocket) -> Receiver<Event> {
-    let (tx, rx) = mpsc::channel::<Event>();
+pub fn spawn(skt: UdpSocket) -> Receiver<(Instant, Event)> {
+    let (tx, rx) = mpsc::channel::<(Instant, Event)>();
 
     // Forward every received packet
     let tx_recv = tx.clone();
@@ -30,7 +30,10 @@ pub fn spawn(skt: UdpSocket) -> Receiver<Event> {
             };
 
             if tx_recv
-                .send(Event::Client(buf[..buf_len].to_vec(), skt_src))
+                .send((
+                    Instant::now(),
+                    Event::Client(buf[..buf_len].to_vec(), skt_src),
+                ))
                 .is_err()
             {
                 break; // Main thread gone, shut down
@@ -44,7 +47,10 @@ pub fn spawn(skt: UdpSocket) -> Receiver<Event> {
         let mut next: Instant = Instant::now() + SIM_TICK_INTV;
         loop {
             thread::sleep(next.saturating_duration_since(Instant::now()));
-            if tx_tick.send(Event::SimTick).is_err() {
+            if tx_tick
+                .send((Instant::now(), Event::SimTick))
+                .is_err()
+            {
                 break;
             }
 
@@ -60,7 +66,11 @@ pub fn spawn(skt: UdpSocket) -> Receiver<Event> {
     thread::spawn(move || {
         loop {
             thread::sleep(RETRY_CHECK_INTV);
-            if tx.send(Event::Retry).is_err() {
+
+            if tx
+                .send((Instant::now(), Event::Retry))
+                .is_err()
+            {
                 break;
             }
         }
