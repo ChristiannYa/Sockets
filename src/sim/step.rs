@@ -1,6 +1,7 @@
 use crate::sim::{
     consts::{
-        CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT, JUMP_VEL, SPEED, TICK_DT,
+        CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT,
+        JUMP_VEL, SPEED, TICK_DT,
     },
     intent::PlayerIntentSim,
     state::PlayerState,
@@ -12,13 +13,17 @@ pub struct Step<'a> {
 }
 
 impl<'a> Step<'a> {
-    pub fn new(p: &'a mut PlayerState, sim_intent: &'a PlayerIntentSim) -> Self {
+    pub fn new(
+        p: &'a mut PlayerState,
+        sim_intent: &'a PlayerIntentSim,
+    ) -> Self {
         Step { p, sim_intent }
     }
 
     pub fn run(&mut self) {
         self.apply_gravity();
 
+        self.mv_hor_face();
         self.mv_x_vel();
         self.mv_y_jump();
         self.mv_y_crouch();
@@ -27,9 +32,7 @@ impl<'a> Step<'a> {
         self.temp_floor();
     }
 
-    fn apply_gravity(&mut self) {
-        self.p.vel[1] -= GRAVITY * TICK_DT;
-    }
+    fn apply_gravity(&mut self) { self.p.vel[1] -= GRAVITY * TICK_DT; }
 
     fn mv_x_vel(&mut self) {
         let (x, z) = wish_dir(
@@ -46,6 +49,8 @@ impl<'a> Step<'a> {
         }
     }
 
+    fn mv_hor_face(&mut self) { self.p.yaw = self.sim_intent.held.yaw; }
+
     fn mv_y_jump(&mut self) {
         if self.sim_intent.edges.jump && self.p.is_on_floor {
             self.p.vel[1] = JUMP_VEL
@@ -54,11 +59,7 @@ impl<'a> Step<'a> {
 
     fn mv_y_crouch(&mut self) {
         if self.p.is_on_floor {
-            let dir = if self.sim_intent.held.crouch {
-                -1.0
-            } else {
-                1.0
-            };
+            let dir = if self.sim_intent.held.crouch { -1.0 } else { 1.0 };
             let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
             self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
         }
@@ -84,17 +85,10 @@ impl<'a> Step<'a> {
 fn wish_dir(x: f32, z: f32, yaw: f32) -> (f32, f32) {
     let mag = x.hypot(z);
 
-    let (mv_x, mv_z) = if mag > 1.0 {
-        (x / mag, z / mag)
-    } else {
-        (x, z)
-    };
+    let (mv_x, mv_z) = if mag > 1.0 { (x / mag, z / mag) } else { (x, z) };
 
     let (yaw_sin, yaw_cos) = yaw.sin_cos();
-    (
-        yaw_cos * mv_x + yaw_sin * mv_z,
-        -yaw_sin * mv_x + yaw_cos * mv_z,
-    )
+    (yaw_cos * mv_x + yaw_sin * mv_z, -yaw_sin * mv_x + yaw_cos * mv_z)
 }
 
 fn move_toward(from: f32, to: f32, delta: f32) -> f32 {
@@ -111,9 +105,7 @@ mod tests {
 
     use super::*;
 
-    fn approx(a: f32, b: f32) -> bool {
-        (a - b).abs() < 1e-4
-    }
+    fn approx(a: f32, b: f32) -> bool { (a - b).abs() < 1e-4 }
 
     #[test]
     fn gravity_spawned_stays_put() {
@@ -156,9 +148,7 @@ mod tests {
                 mv_z: -1.0,
                 ..Default::default()
             },
-            Edges {
-                ..Default::default()
-            },
+            Edges { ..Default::default() },
         );
 
         Step::new(&mut p, &inp).run();
@@ -190,11 +180,7 @@ mod tests {
     fn mv_x_diagonal_input_is_clamped() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
-            held: Held {
-                mv_x: 1.0,
-                mv_z: 1.0,
-                ..Default::default()
-            },
+            held: Held { mv_x: 1.0, mv_z: 1.0, ..Default::default() },
             ..Default::default()
         };
 
@@ -208,10 +194,7 @@ mod tests {
     fn mv_x_inp_release_stops_in_about_a_third_of_a_second() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
-            held: Held {
-                mv_z: -1.0,
-                ..Default::default()
-            },
+            held: Held { mv_z: -1.0, ..Default::default() },
             ..Default::default()
         };
 
@@ -228,14 +211,38 @@ mod tests {
     }
 
     #[test]
+    fn mv_hor_face_stores_held_yaw() {
+        let mut p = PlayerState::spawn(0.0, 0.0);
+        let inp = PlayerIntentSim {
+            held: Held { yaw: 1.2, ..Default::default() },
+            ..Default::default()
+        };
+
+        Step::new(&mut p, &inp).run();
+
+        assert!(approx(p.yaw, 1.2));
+    }
+
+    #[test]
+    fn mv_hor_face_yaw_survives_a_missing_intent() {
+        let mut p = PlayerState::spawn(0.0, 0.0);
+        let inp = PlayerIntentSim {
+            held: Held { yaw: 1.2, ..Default::default() },
+            ..Default::default()
+        };
+
+        Step::new(&mut p, &inp).run();
+        Step::new(&mut p, &inp.held_only()).run();
+
+        assert!(approx(p.yaw, 1.2));
+    }
+
+    #[test]
     // "Apex": Highest point of a jump
     fn mv_y_jump_airtime_and_apex() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
-            edges: Edges {
-                jump: true,
-                ..Default::default()
-            },
+            edges: Edges { jump: true, ..Default::default() },
             ..Default::default()
         };
 
@@ -266,10 +273,7 @@ mod tests {
         p.is_on_floor = false;
 
         let inp = PlayerIntentSim {
-            edges: Edges {
-                jump: true,
-                ..Default::default()
-            },
+            edges: Edges { jump: true, ..Default::default() },
             ..Default::default()
         };
 
@@ -283,10 +287,7 @@ mod tests {
     fn mv_y_crouch_takes_ten_ticks() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
-            held: Held {
-                crouch: true,
-                ..Default::default()
-            },
+            held: Held { crouch: true, ..Default::default() },
             ..Default::default()
         };
 
@@ -307,10 +308,7 @@ mod tests {
     fn mv_y_crouch_release_regrows() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
-            held: Held {
-                crouch: true,
-                ..Default::default()
-            },
+            held: Held { crouch: true, ..Default::default() },
             ..Default::default()
         };
         for _ in 0..15 {
@@ -330,10 +328,7 @@ mod tests {
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
         let inp = PlayerIntentSim {
-            held: Held {
-                crouch: true,
-                ..Default::default()
-            },
+            held: Held { crouch: true, ..Default::default() },
             ..Default::default()
         };
 

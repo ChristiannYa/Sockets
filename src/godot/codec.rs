@@ -99,6 +99,9 @@ impl UdpCodec {
     }
 
     #[func]
+    fn decode_yaw(&self, yaw: u32) -> f32 { quantize::YAW.decode(yaw) }
+
+    #[func]
     fn decode_hsv(&self, h: u32, s: u32, v: u32) -> Color {
         let codec = quantize::hsv(&self.schema);
         Color::from_hsv(

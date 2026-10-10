@@ -13,6 +13,7 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::IntentCrouch, 1),
     (FieldName::LocationX, 11),
     (FieldName::LocationZ, 11),
+    (FieldName::Yaw, 10),
     (FieldName::ColorH, 6),
     (FieldName::ColorS, 3),
     (FieldName::ColorV, 3),

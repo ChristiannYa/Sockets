@@ -216,6 +216,10 @@ impl<'w> World<'w> {
                     fields: &[
                         (FieldName::LocationX, loc_qua.x.encode(x)),
                         (FieldName::LocationZ, loc_qua.z.encode(z)),
+                        (
+                            FieldName::Yaw,
+                            quantize::YAW.encode(player.state.yaw),
+                        ),
                     ],
                     sid: *sid,
                 })

@@ -13,10 +13,7 @@ pub struct UdpPending {
 impl UdpPending {
     #[func]
     fn create() -> Gd<Self> {
-        Gd::from_init_fn(|_| Self {
-            pkts: HashMap::new(),
-            next_id: 0,
-        })
+        Gd::from_init_fn(|_| Self { pkts: HashMap::new(), next_id: 0 })
     }
 
     #[func]
@@ -28,14 +25,14 @@ impl UdpPending {
 
     #[func]
     fn track(&mut self, id: u8, bytes: PackedByteArray) {
-        self.pkts
-            .insert(id, PendingPacket::new(id, bytes.to_vec(), Instant::now()));
+        self.pkts.insert(
+            id,
+            PendingPacket::new(id, bytes.to_vec(), Instant::now()),
+        );
     }
 
     #[func]
-    fn ack(&mut self, id: u8) -> bool {
-        self.pkts.remove(&id).is_some()
-    }
+    fn ack(&mut self, id: u8) -> bool { self.pkts.remove(&id).is_some() }
 
     /// Sweeps every pending entry: due-and-under-limit entries are bumped and
     /// returned for resending.

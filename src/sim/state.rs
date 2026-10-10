@@ -5,6 +5,7 @@ pub struct PlayerState {
     pub pos: [f32; 3],
     pub vel: [f32; 3],
     pub height: f32,
+    pub yaw: f32,
     pub is_on_floor: bool,
 }
 
@@ -14,6 +15,7 @@ impl PlayerState {
             pos: [x, FLOOR_Y, z],
             vel: [0.0; 3],
             height: HEIGHT,
+            yaw: 0.0,
             is_on_floor: true,
         }
     }

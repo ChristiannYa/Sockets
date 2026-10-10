@@ -18,6 +18,7 @@ pub enum FieldName {
     IsCrouching,
     LocationX,
     LocationZ,
+    Yaw,
     ColorH,
     ColorS,
     ColorV,
