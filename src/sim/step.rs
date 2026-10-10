@@ -24,9 +24,9 @@ impl<'a> Step<'a> {
         self.apply_gravity();
 
         self.mv_hor_face();
-        self.mv_x_vel();
-        self.mv_y_jump();
-        self.mv_y_crouch();
+        self.mv_hor_vel();
+        self.mv_ver_jump();
+        self.mv_ver_crouch();
 
         self.integrate();
         self.temp_floor();
@@ -34,7 +34,7 @@ impl<'a> Step<'a> {
 
     fn apply_gravity(&mut self) { self.p.vel[1] -= GRAVITY * TICK_DT; }
 
-    fn mv_x_vel(&mut self) {
+    fn mv_hor_vel(&mut self) {
         let (x, z) = wish_dir(
             self.sim_intent.held.mv_x,
             self.sim_intent.held.mv_z,
@@ -51,13 +51,13 @@ impl<'a> Step<'a> {
 
     fn mv_hor_face(&mut self) { self.p.yaw = self.sim_intent.held.yaw; }
 
-    fn mv_y_jump(&mut self) {
+    fn mv_ver_jump(&mut self) {
         if self.sim_intent.edges.jump && self.p.is_on_floor {
             self.p.vel[1] = JUMP_VEL
         }
     }
 
-    fn mv_y_crouch(&mut self) {
+    fn mv_ver_crouch(&mut self) {
         if self.p.is_on_floor {
             let dir = if self.sim_intent.held.crouch { -1.0 } else { 1.0 };
             let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_x_fwd_inp_reaches_full_speed_immediately() {
+    fn mv_hor_fwd_inp_reaches_full_speed_immediately() {
         let mut p = PlayerState::spawn(0.0, 0.0);
 
         let inp = PlayerIntentSim::new(
@@ -158,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_x_yaw_rotates_movement() {
+    fn mv_hor_yaw_rotates_movemente() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
             held: Held {
@@ -177,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_x_diagonal_input_is_clamped() {
+    fn mv_hor_diagonal_input_is_clamped() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
             held: Held { mv_x: 1.0, mv_z: 1.0, ..Default::default() },
@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_x_inp_release_stops_in_about_a_third_of_a_second() {
+    fn mv_hor_inp_release_stops_in_about_a_third_of_a_second() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
             held: Held { mv_z: -1.0, ..Default::default() },
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     // "Apex": Highest point of a jump
-    fn mv_y_jump_airtime_and_apex() {
+    fn mv_ver_jump_airtime_and_apex() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
             edges: Edges { jump: true, ..Default::default() },
@@ -267,7 +267,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_y_jump_ignored_in_air() {
+    fn mv_ver_jump_ignored_in_air() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
@@ -284,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_y_crouch_takes_ten_ticks() {
+    fn mv_ver_crouch_takes_ten_ticks() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
             held: Held { crouch: true, ..Default::default() },
@@ -305,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_y_crouch_release_regrows() {
+    fn mv_ver_crouch_release_regrows() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim {
             held: Held { crouch: true, ..Default::default() },
@@ -323,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn mv_y_crouch_ignored_in_air() {
+    fn mv_ver_crouch_ignored_in_air() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
