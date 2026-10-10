@@ -6,8 +6,6 @@ mod rel;
 mod session;
 mod world;
 
-use std::time::Instant;
-
 use crate::{
     codec::Codec,
     events::Event,
@@ -17,9 +15,16 @@ use crate::{
     session::Session,
     world::World,
 };
+use std::time::Instant;
+use std::{env, process};
 
 fn main() {
-    let net = Net::build("0.0.0.0:34254");
+    let conf = Conf::build(env::args()).unwrap_or_else(|err| {
+        eprintln!("Problem parsing arguments: {err}");
+        process::exit(1);
+    });
+
+    let net = Net::build(&conf.addr);
     let evs_rx = events::spawn(net.try_clone_skt());
 
     let mut sess = Session::new();
@@ -56,5 +61,26 @@ fn main() {
                 "slow: queue_delay={queue_delay:?} handle_t={handle_t:?}"
             );
         }
+    }
+}
+
+pub struct Conf {
+    pub addr: String,
+}
+
+impl Conf {
+    fn build(
+        mut args: impl Iterator<Item = String>,
+    ) -> Result<Self, &'static str> {
+        args.next();
+
+        Result::Ok(Conf {
+            addr: match args.next() {
+                Option::Some(val) => val,
+                Option::None => {
+                    return Result::Err("Did not get an address");
+                }
+            },
+        })
     }
 }

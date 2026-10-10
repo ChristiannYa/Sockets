@@ -21,7 +21,8 @@ where
 impl Net {
     /// Panics if UDP socket creation from the given address fails
     pub fn build(addr: &str) -> Self {
-        let skt = UdpSocket::bind(addr).expect("Couldn't bind");
+        let skt = UdpSocket::bind(addr)
+            .unwrap_or_else(|e| panic!("Couldn't bind {addr}: {e}"));
         Net { skt }
     }
 
