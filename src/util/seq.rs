@@ -4,7 +4,7 @@
 pub struct Seq(pub u8);
 
 impl Seq {
-    /// Returns `true` if `self` is older than `other`
+    /// Returns `true` if `self` is newer than `other`
     pub fn is_newer_than(self, other: Seq) -> bool {
         // `self.0.wrapping_sub(other.0)` is the forward distance from `other.0`
         // to `self.0` on the 0..255 range.
