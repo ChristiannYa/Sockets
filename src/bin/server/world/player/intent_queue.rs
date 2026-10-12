@@ -55,7 +55,5 @@ impl PlayerIntentQueue {
         self.last_sim
     }
 
-    pub fn simed_seq(&self) -> Seq {
-        self.simed_seq
-    }
+    pub fn simed_seq(&self) -> Seq { self.simed_seq }
 }
