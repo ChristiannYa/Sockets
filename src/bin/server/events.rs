@@ -5,6 +5,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use bitp::logt;
+
 pub enum Event {
     Client(Vec<u8>, SocketAddr),
     Retry,
@@ -50,7 +52,7 @@ pub fn spawn(skt: UdpSocket) -> Receiver<(Instant, Event)> {
 
             let late = Instant::now().saturating_duration_since(next);
             if late.as_millis() >= 2 {
-                eprintln!("tick thread late by {late:?}");
+                logt!("tick thread late by {late:?}");
             }
 
             if tx_tick

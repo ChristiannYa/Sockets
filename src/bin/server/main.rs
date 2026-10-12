@@ -15,6 +15,7 @@ use crate::{
     session::Session,
     world::World,
 };
+use bitp::logt;
 use std::time::Instant;
 use std::{env, process};
 
@@ -57,9 +58,7 @@ fn main() {
 
         let handle_t = started.elapsed();
         if queue_delay.as_millis() >= 2 || handle_t.as_millis() >= 2 {
-            eprintln!(
-                "slow: queue_delay={queue_delay:?} handle_t={handle_t:?}"
-            );
+            logt!("slow: queue_delay={queue_delay:?} handle_t={handle_t:?}");
         }
     }
 }
