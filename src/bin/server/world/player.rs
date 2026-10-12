@@ -2,7 +2,7 @@ mod intent_queue;
 
 use crate::world::player::intent_queue::PlayerIntentQueue;
 use bitp::{
-    sim::{Collision, PlayerIntentSim, PlayerState, Step},
+    sim::{Collision, PlayerIntentCmd, PlayerState, Step},
     util::Seq,
 };
 use std::collections::HashMap;
@@ -17,14 +17,9 @@ impl Players {
         self.hm.insert(sid, Player::new(x, z));
     }
 
-    pub fn queue_intent(
-        &mut self,
-        sid: u32,
-        seq: Seq,
-        sim_intent: PlayerIntentSim,
-    ) {
+    pub fn queue_intent(&mut self, sid: u32, seq: Seq, cmd: PlayerIntentCmd) {
         if let Some(player) = self.hm.get_mut(&sid) {
-            player.intent_queue.queue(seq, sim_intent);
+            player.intent_queue.queue(seq, cmd);
         }
     }
 

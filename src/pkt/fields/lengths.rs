@@ -9,7 +9,7 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::IntentMvX, 6),
     (FieldName::IntentMvZ, 6),
     (FieldName::IntentYaw, 10),
-    (FieldName::IntentJump, 1),
+    (FieldName::IntentJump, 3),
     (FieldName::IntentCrouch, 1),
     (FieldName::LocationX, 11),
     (FieldName::LocationZ, 11),

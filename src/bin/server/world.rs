@@ -13,7 +13,7 @@ use bitp::{
     pkt::FieldName,
     quantize,
     rel::retx::PendingPacket,
-    sim::PlayerIntentSim,
+    sim::PlayerIntentCmd,
     util::Seq,
 };
 use std::{net::SocketAddr, time::Instant};
@@ -51,15 +51,13 @@ impl<'w> World<'w> {
         self.players.tick();
     }
 
-    pub fn tick_ct(&self) -> u16 { self.tick_ct }
-
     pub fn queue_player_intent(
         &mut self,
         sid: u32,
         seq: Seq,
-        intent: PlayerIntentSim,
+        cmd: PlayerIntentCmd,
     ) {
-        self.players.queue_intent(sid, seq, intent)
+        self.players.queue_intent(sid, seq, cmd)
     }
 
     /// Returns a reliable buffer with the [FieldName::DevIsNewPlayer] flag

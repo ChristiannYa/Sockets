@@ -1,5 +1,7 @@
 mod edge_mapping;
 
+pub use edge_mapping::PlayerEdgeMapper;
+
 /// State the player is *in*.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Held {
@@ -24,6 +26,12 @@ pub struct Edges<T> {
 pub struct PlayerIntentCmd {
     pub held: Held,
     pub edge_cts: Edges<u8>,
+}
+
+impl PlayerIntentCmd {
+    pub fn new(held: Held, edge_cts: Edges<u8>) -> Self {
+        PlayerIntentCmd { held, edge_cts }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]

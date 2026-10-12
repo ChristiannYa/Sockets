@@ -33,7 +33,7 @@ pub fn buf(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
                 return;
             };
             if let Some(buf) = buf.get(1..) {
-                IntentPkt::new(manager, skt_src, buf, sid).recv();
+                IntentPkt::new(manager, buf, sid).recv();
             }
         }
         Ok(PacketKind::Snapshot) | Err(()) => {}

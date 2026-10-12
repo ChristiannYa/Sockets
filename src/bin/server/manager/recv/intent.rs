@@ -2,10 +2,9 @@ use crate::manager::Manager;
 use bitp::{
     pkt::FieldName,
     quantize,
-    sim::{Edges, Held, PlayerIntentSim},
+    sim::{Edges, Held, PlayerIntentCmd},
     util::Seq,
 };
-use std::net::SocketAddr;
 
 const INTENT_FIELDS: [FieldName; 6] = [
     FieldName::IntentSeq,
@@ -18,7 +17,6 @@ const INTENT_FIELDS: [FieldName; 6] = [
 
 pub struct IntentPkt<'i, 'c, 'w> {
     manager: &'i mut Manager<'c, 'w>,
-    skt_src: SocketAddr,
     buf: &'i [u8],
     sid: u32,
 }
@@ -26,24 +24,23 @@ pub struct IntentPkt<'i, 'c, 'w> {
 impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
     pub fn new(
         manager: &'i mut Manager<'c, 'w>,
-        skt_src: SocketAddr,
         buf: &'i [u8],
         sid: u32,
     ) -> Self {
-        IntentPkt { manager, skt_src, buf, sid }
+        IntentPkt { manager, buf, sid }
     }
 
     pub fn recv(&mut self) {
-        let Some((seq, sim_intent)) = self.decode() else {
+        let Some((seq, cmd)) = self.decode() else {
             return;
         };
 
         self.manager
             .world
-            .queue_player_intent(self.sid, seq, sim_intent);
+            .queue_player_intent(self.sid, seq, cmd);
     }
 
-    fn decode(&self) -> Option<(Seq, PlayerIntentSim)> {
+    fn decode(&self) -> Option<(Seq, PlayerIntentCmd)> {
         let schema = self.manager.codec.schema();
 
         let payload_ceil_len = INTENT_FIELDS
@@ -63,7 +60,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
             return None;
         }
 
-        let seq = reader.read(&FieldName::IntentSeq) as u8;
+        let seq = Seq(reader.read(&FieldName::IntentSeq) as u8);
 
         let held = Held {
             mv_x: quantize::MV.decode(reader.read(&FieldName::IntentMvX)),
@@ -71,9 +68,9 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
             yaw: quantize::YAW.decode(reader.read(&FieldName::IntentYaw)),
             crouch: reader.read(&FieldName::IntentCrouch) == 1,
         };
+        let edges = Edges { jump: reader.read(&FieldName::IntentJump) as u8 };
+        let cmd = PlayerIntentCmd::new(held, edges);
 
-        let edges = Edges { jump: reader.read(&FieldName::IntentJump) == 1 };
-
-        Some((Seq(seq), PlayerIntentSim::new(held, edges)))
+        Some((seq, cmd))
     }
 }
