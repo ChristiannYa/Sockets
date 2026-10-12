@@ -1,4 +1,4 @@
-use crate::quantize::fixed_pt::FixedPoint;
+use crate::qua::fixed_pt::FixedPoint;
 
 pub const MV: FixedPoint = FixedPoint::new(1.0 / 31.0, 31, 6);
 

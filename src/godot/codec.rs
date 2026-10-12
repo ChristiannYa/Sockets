@@ -2,7 +2,7 @@ use crate::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     intent,
     pkt::{FIELD_LENGTHS, PacketKind},
-    quantize,
+    qua,
     sim::{Edges, Held, PlayerIntentCmd},
 };
 use godot::{
@@ -94,21 +94,19 @@ impl UdpCodec {
 
     #[func]
     fn decode_loc(&self, x: u32, z: u32) -> Vector3 {
-        let codec = quantize::loc(&self.schema);
+        let codec = qua::loc(&self.schema);
         Vector3::new(codec.x.decode(x), 0.0, codec.z.decode(z))
     }
 
     #[func]
-    fn decode_y(&self, y: u32) -> f32 { quantize::intent::Y.decode(y) }
+    fn decode_y(&self, y: u32) -> f32 { qua::intent::Y.decode(y) }
 
     #[func]
-    fn decode_yaw(&self, yaw: u32) -> f32 {
-        quantize::intent::YAW.decode(yaw)
-    }
+    fn decode_yaw(&self, yaw: u32) -> f32 { qua::intent::YAW.decode(yaw) }
 
     #[func]
     fn decode_hsv(&self, h: u32, s: u32, v: u32) -> Color {
-        let codec = quantize::hsv(&self.schema);
+        let codec = qua::hsv(&self.schema);
         Color::from_hsv(
             codec.h.decode(h) as f64,
             codec.s.decode(s) as f64,

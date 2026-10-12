@@ -1,7 +1,7 @@
 use crate::{
     bits::{PacketSchema, utils::mask},
     pkt::FieldName,
-    quantize::fixed_pt::FixedPoint,
+    qua::fixed_pt::FixedPoint,
 };
 
 pub struct HsvCodec {

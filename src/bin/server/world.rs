@@ -11,7 +11,7 @@ use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
     logt,
     pkt::FieldName,
-    quantize,
+    qua,
     rel::retx::PendingPacket,
     sim::PlayerIntentCmd,
     util::Seq,
@@ -76,13 +76,11 @@ impl<'w> World<'w> {
         &mut self,
         rel_target: &mut RelTarget,
     ) -> (Vec<u8>, u8) {
-        let (spawn_pt, spawn_pt_codec) = (
-            logic::spawn::player_spawn_pt(),
-            quantize::loc(self.codec.schema()),
-        );
+        let (spawn_pt, spawn_pt_codec) =
+            (logic::spawn::player_spawn_pt(), qua::loc(self.codec.schema()));
         let (hsv, hsv_codec) = (
             logic::color::hsv(),
-            quantize::hsv(self.codec.schema()), //
+            qua::hsv(self.codec.schema()), //
         );
 
         let (enc_x, enc_z) = (
@@ -202,7 +200,7 @@ impl<'w> World<'w> {
     }
 
     pub fn players_snapshot_buf(&self) -> Option<Vec<u8>> {
-        let loc_qua = quantize::loc(self.codec.schema());
+        let loc_qua = qua::loc(self.codec.schema());
 
         let records: Vec<Vec<u8>> = self
             .players
@@ -214,10 +212,10 @@ impl<'w> World<'w> {
                     fields: &[
                         (FieldName::LocationX, loc_qua.x.encode(x)),
                         (FieldName::LocationZ, loc_qua.z.encode(z)),
-                        (FieldName::LocationY, quantize::intent::Y.encode(y)),
+                        (FieldName::LocationY, qua::intent::Y.encode(y)),
                         (
                             FieldName::Yaw,
-                            quantize::intent::YAW.encode(player.state.yaw),
+                            qua::intent::YAW.encode(player.state.yaw),
                         ),
                     ],
                     sid: *sid,

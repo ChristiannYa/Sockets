@@ -1,7 +1,7 @@
 use crate::{
     bits::{BitWriter, PacketSchema},
     pkt::{FieldName, PacketKind},
-    quantize,
+    qua,
     sim::PlayerIntentCmd,
 };
 
@@ -16,9 +16,9 @@ pub fn encode(
     let mut writer = BitWriter::new(schema);
 
     writer.write(&FieldName::IntentSeq, &(seq as u32));
-    writer.write(&FieldName::IntentMvX, &quantize::intent::MV.encode(intent.held.mv_x));
-    writer.write(&FieldName::IntentMvZ, &quantize::intent::MV.encode(intent.held.mv_z));
-    writer.write(&FieldName::IntentYaw, &quantize::intent::YAW.encode(intent.held.yaw));
+    writer.write(&FieldName::IntentMvX, &qua::intent::MV.encode(intent.held.mv_x));
+    writer.write(&FieldName::IntentMvZ, &qua::intent::MV.encode(intent.held.mv_z));
+    writer.write(&FieldName::IntentYaw, &qua::intent::YAW.encode(intent.held.yaw));
     writer.write(&FieldName::IntentJump, &(intent.edge_cts.jump as u32));
     writer.write(&FieldName::IntentCrouch, &(intent.held.crouch as u32));
 

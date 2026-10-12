@@ -1,7 +1,7 @@
 use crate::manager::Manager;
 use bitp::{
     pkt::FieldName,
-    quantize,
+    qua,
     sim::{Edges, Held, PlayerIntentCmd},
     util::Seq,
 };
@@ -62,16 +62,14 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
 
         let seq = Seq(reader.read(&FieldName::IntentSeq) as u8);
 
-        let held = Held {
-            mv_x: quantize::intent::MV
-                .decode(reader.read(&FieldName::IntentMvX)),
-            mv_z: quantize::intent::MV
-                .decode(reader.read(&FieldName::IntentMvZ)),
-            yaw: quantize::intent::YAW
-                .decode(reader.read(&FieldName::IntentYaw)),
-            crouch: reader.read(&FieldName::IntentCrouch) == 1,
-        };
-        let edges = Edges { jump: reader.read(&FieldName::IntentJump) as u8 };
+        let mv_x = qua::intent::MV.decode(reader.read(&FieldName::IntentMvX));
+        let mv_z = qua::intent::MV.decode(reader.read(&FieldName::IntentMvZ));
+        let yaw = qua::intent::YAW.decode(reader.read(&FieldName::IntentYaw));
+        let jump_ct = reader.read(&FieldName::IntentJump) as u8;
+        let crouch = reader.read(&FieldName::IntentCrouch) == 1;
+
+        let held = Held { mv_x, mv_z, yaw, crouch };
+        let edges = Edges { jump: jump_ct };
         let cmd = PlayerIntentCmd::new(held, edges);
 
         Some((seq, cmd))

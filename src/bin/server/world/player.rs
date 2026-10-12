@@ -2,6 +2,7 @@ mod intent_queue;
 
 use crate::world::player::intent_queue::PlayerIntentQueue;
 use bitp::{
+    logt,
     sim::{Collision, PlayerIntentCmd, PlayerState, Step},
     util::Seq,
 };
@@ -29,8 +30,13 @@ impl Players {
     }
 
     fn step_all(&mut self) {
-        for player in self.hm.values_mut() {
+        for (sid, player) in self.hm.iter_mut() {
             let sim_intent = player.intent_queue.next();
+
+            if sim_intent.edges.jump {
+                logt!("jump fired for #{sid}")
+            }
+
             Step::new(&mut player.state, &sim_intent).run();
         }
     }

@@ -1,7 +1,7 @@
 pub mod bits;
 pub mod intent;
 pub mod pkt;
-pub mod quantize;
+pub mod qua;
 pub mod rel;
 pub mod sim;
 pub mod util;
