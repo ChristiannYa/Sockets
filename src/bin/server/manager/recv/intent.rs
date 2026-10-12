@@ -63,9 +63,12 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         let seq = Seq(reader.read(&FieldName::IntentSeq) as u8);
 
         let held = Held {
-            mv_x: quantize::MV.decode(reader.read(&FieldName::IntentMvX)),
-            mv_z: quantize::MV.decode(reader.read(&FieldName::IntentMvZ)),
-            yaw: quantize::YAW.decode(reader.read(&FieldName::IntentYaw)),
+            mv_x: quantize::intent::MV
+                .decode(reader.read(&FieldName::IntentMvX)),
+            mv_z: quantize::intent::MV
+                .decode(reader.read(&FieldName::IntentMvZ)),
+            yaw: quantize::intent::YAW
+                .decode(reader.read(&FieldName::IntentYaw)),
             crouch: reader.read(&FieldName::IntentCrouch) == 1,
         };
         let edges = Edges { jump: reader.read(&FieldName::IntentJump) as u8 };

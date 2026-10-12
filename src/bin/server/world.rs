@@ -208,15 +208,16 @@ impl<'w> World<'w> {
             .players
             .iter()
             .map(|(sid, player)| {
-                let [x, _, z] = player.state.pos;
+                let [x, y, z] = player.state.pos;
                 self.codec.headless_pack(FieldsPack {
                     id: None,
                     fields: &[
                         (FieldName::LocationX, loc_qua.x.encode(x)),
                         (FieldName::LocationZ, loc_qua.z.encode(z)),
+                        (FieldName::LocationY, quantize::intent::Y.encode(y)),
                         (
                             FieldName::Yaw,
-                            quantize::YAW.encode(player.state.yaw),
+                            quantize::intent::YAW.encode(player.state.yaw),
                         ),
                     ],
                     sid: *sid,

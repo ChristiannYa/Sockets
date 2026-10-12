@@ -80,7 +80,6 @@ mod tests {
                     }
                 });
         }
-        log::debug!("bits_written (test): {bits_written_test}");
 
         let buf = writer.buf();
         let mut reader = BitReader::new(schema, &buf);
@@ -97,24 +96,8 @@ mod tests {
                 .iter()
                 .enumerate()
                 .all(|(ind, (_, field_val))| {
-                    let (field_read_name, field_read_value) = &field_reads[ind];
+                    let (_, field_read_value) = &field_reads[ind];
                     let matches = *field_val == *field_read_value;
-                    if !matches {
-                        log::error!(
-                            "{:?}: read ({field_read_value})",
-                            field_read_name
-                        );
-                        log::error!(
-                            "{:?}: orig ({field_val})",
-                            field_read_name
-                        );
-                    } else {
-                        log::debug!(
-                            "{:?}: read ({field_read_value}) == orig ({})",
-                            field_read_name,
-                            field_val
-                        );
-                    }
                     matches
                 });
 
@@ -273,8 +256,6 @@ mod tests {
 
     #[test]
     fn read_schema_partial() -> Result<(), String> {
-        crate::util::test::init_test_logger();
-
         let schema = PacketSchema::build(&[
             (FieldName::Health, 3),
             (FieldName::RocketsCount, 3),

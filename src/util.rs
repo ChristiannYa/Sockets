@@ -1,6 +1,4 @@
 mod seq;
-#[cfg(test)]
-pub mod test;
 
 pub use seq::Seq;
 
