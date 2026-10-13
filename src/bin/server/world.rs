@@ -48,7 +48,7 @@ impl<'w> World<'w> {
         self.players.tick();
     }
 
-    pub fn player_ref(&mut self, sid: u32) -> Option<&mut Player> {
+    pub fn player_mut_ref(&mut self, sid: u32) -> Option<&mut Player> {
         self.players.by_sid_mut_ref(sid)
     }
 

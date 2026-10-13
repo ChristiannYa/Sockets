@@ -35,7 +35,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
             return;
         };
 
-        if let Some(player) = self.manager.world.player_ref(self.sid) {
+        if let Some(player) = self.manager.world.player_mut_ref(self.sid) {
             player.intent_queue.queue(seq, cmd);
         }
     }
