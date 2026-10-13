@@ -15,8 +15,6 @@ use bitp::{
     bits::{BitReader, BitWriter},
     pkt::FieldName,
     qua,
-    sim::PlayerIntentCmd,
-    util::Seq,
 };
 use std::net::SocketAddr;
 
@@ -108,7 +106,7 @@ impl<'w> World<'w> {
             .players_snapshot_pkt(self.tick_ct, &self.players)
     }
 
-    pub fn schema_kt(
+    pub fn schema_pkt(
         &mut self,
         sid: u32,
         reader: &mut BitReader,
