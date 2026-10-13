@@ -2,11 +2,11 @@ use crate::world::player::PlayersHM;
 use bitp::sim::{Collision, PlayerState, Step};
 
 pub fn tick(hm: &mut PlayersHM) {
-    step_all(hm);
+    step(hm);
     resolve_collisions(hm);
 }
 
-fn step_all(hm: &mut PlayersHM) {
+fn step(hm: &mut PlayersHM) {
     for player in hm.values_mut() {
         let sim_intent = player.intent_queue.next();
         Step::new(&mut player.state, &sim_intent).run();

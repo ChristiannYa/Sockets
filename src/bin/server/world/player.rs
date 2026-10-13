@@ -27,7 +27,7 @@ impl Players {
         self.hm.insert(sid, Player::new(x, z, color));
     }
 
-    pub fn sim_tick(&mut self) { world::sim::tick(&mut self.hm); }
+    pub fn sim_tick(&mut self) { world::sim::players::tick(&mut self.hm); }
 }
 
 impl Default for Players {

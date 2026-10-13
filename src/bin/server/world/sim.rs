@@ -1,3 +1,1 @@
-mod player;
-
-pub use player::tick;
+pub mod players;
