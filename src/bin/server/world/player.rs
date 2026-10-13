@@ -1,9 +1,11 @@
 mod intent_queue;
 
 use crate::world::{
-    self, player::intent_queue::PlayerIntentQueue, util::Hsv,
+    self,
+    player::intent_queue::PlayerIntentQueue,
+    util::{Hsv, rand_disk_pt_xz},
 };
-use bitp::sim::PlayerState;
+use bitp::{bits::PacketSchema, pkt::FieldName, qua, sim::PlayerState};
 use std::collections::HashMap;
 
 pub type PlayersHM = HashMap<u32, Player>;
@@ -23,8 +25,8 @@ impl Players {
         self.hm.get_mut(&sid)
     }
 
-    pub fn spawn(&mut self, sid: u32, x: f32, z: f32, color: Hsv) {
-        self.hm.insert(sid, Player::new(x, z, color));
+    pub fn insert_new(&mut self, player: Player, sid: u32) {
+        self.hm.insert(sid, player);
     }
 
     pub fn sim_tick(&mut self) { world::sim::players::tick(&mut self.hm); }
@@ -47,5 +49,33 @@ impl Player {
             intent_queue: PlayerIntentQueue::new(),
             color,
         }
+    }
+
+    /// Returns a new player along with essential spawn information fields
+    /// encoded
+    pub fn spawn(schema: &PacketSchema) -> (Player, [(FieldName, u32); 5]) {
+        let (hsv, hsv_codec) = (Hsv::rand(), qua::hsv(schema));
+
+        let ((spawn_x, spawn_z), spawn_codec) =
+            (rand_disk_pt_xz(10.0), qua::loc(schema));
+
+        let (enc_x, enc_z) =
+            (spawn_codec.x.encode(spawn_x), spawn_codec.z.encode(spawn_z));
+
+        let fields = [
+            (FieldName::LocationX, enc_x),
+            (FieldName::LocationZ, enc_z),
+            (FieldName::ColorH, hsv_codec.h.encode(hsv.h)),
+            (FieldName::ColorS, hsv_codec.s.encode(hsv.s)),
+            (FieldName::ColorV, hsv_codec.v.encode(hsv.v)),
+        ];
+
+        let player = Player::new(
+            spawn_codec.x.decode(enc_x),
+            spawn_codec.z.decode(enc_z),
+            Hsv::new(hsv.h, hsv.s, hsv.v),
+        );
+
+        (player, fields)
     }
 }

@@ -9,14 +9,9 @@ use crate::{
     world::{
         pker::WorldPacker,
         player::{Player, Players},
-        util::{Hsv, rand_disk_pt_xz},
     },
 };
-use bitp::{
-    bits::{BitReader, BitWriter},
-    pkt::FieldName,
-    qua,
-};
+use bitp::bits::{BitReader, BitWriter};
 use std::net::SocketAddr;
 
 /// Who to send to and where to track it
@@ -53,41 +48,14 @@ impl<'w> World<'w> {
         self.players.by_sid_mut_ref(sid)
     }
 
-    /// Spawns player in the simulation
     /// Returns a reliable buffer along with its id containing essential spawn
-    /// information (location and color)
+    /// information
     pub fn spawn_player(
         &mut self,
         rel_target: &mut RelTarget,
     ) -> (Vec<u8>, u8) {
-        let ((spawn_x, spawn_z), spawn_pt_codec) = (
-            rand_disk_pt_xz(10.0),
-            qua::loc(self.codec.schema()), //
-        );
-        let (hsv, hsv_codec) = (
-            Hsv::rand(),
-            qua::hsv(self.codec.schema()), //
-        );
-        let (enc_x, enc_z) = (
-            spawn_pt_codec.x.encode(spawn_x),
-            spawn_pt_codec.z.encode(spawn_z), //
-        );
-
-        let fields = [
-            (FieldName::LocationX, enc_x),
-            (FieldName::LocationZ, enc_z),
-            (FieldName::ColorH, hsv_codec.h.encode(hsv.h)),
-            (FieldName::ColorS, hsv_codec.s.encode(hsv.s)),
-            (FieldName::ColorV, hsv_codec.v.encode(hsv.v)),
-        ];
-
-        self.players.spawn(
-            rel_target.sid,
-            spawn_pt_codec.x.decode(enc_x),
-            spawn_pt_codec.z.decode(enc_z),
-            Hsv::new(hsv.h, hsv.s, hsv.v),
-        );
-
+        let (player, fields) = Player::spawn(self.codec.schema());
+        self.players.insert_new(player, rel_target.sid);
         self.pker.rel_pkting(&fields, rel_target)
     }
 
@@ -104,8 +72,7 @@ impl<'w> World<'w> {
     }
 
     pub fn players_snapshot_pkt(&self) -> Option<Vec<u8>> {
-        self.pker
-            .players_snapshot_pkt(self.tick_ct, &self.players)
+        self.pker.players_snapshot_pkt(self.tick_ct, &self.players)
     }
 
     pub fn schema_pkt(
