@@ -6,7 +6,11 @@ pub struct Hsv {
     pub v: f32,
 }
 
-pub fn hsv() -> Hsv {
+impl Hsv {
+    pub fn new(h: f32, s: f32, v: f32) -> Self { Hsv { h, s, v } }
+}
+
+pub fn rand() -> Hsv {
     let mut rng = rand::rng();
     Hsv {
         h: rng.random(),

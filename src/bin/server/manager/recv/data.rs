@@ -63,10 +63,6 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             .welcome_pkt(&mut rel_targ)
             .tap(|pkt| self.manager.net.send_to(pkt, self.skt_src));
 
-        // Capture world state before spawning player and saving its state in
-        // the world/session
-        let is_world_stateful = self.manager.world.has_state();
-
         let (spawn_buf, sb_id) =
             self.manager.world.spawn_player(&mut rel_targ);
         self.manager
@@ -82,10 +78,10 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             self.manager.pending_pkts,
         );
 
-        if is_world_stateful {
+        if let Some(sync_buf) = self.manager.world.sync_buf(sid) {
             self.manager
                 .net
-                .send_to(&self.manager.world.sync_buf(sid), self.skt_src);
+                .send_to(&sync_buf, self.skt_src);
         }
     }
 

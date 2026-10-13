@@ -1,12 +1,11 @@
 pub mod logic;
 mod pker;
 pub mod player;
-mod state;
 
 use crate::{
     codec::{Codec, FieldsPack},
     rel::retx::PendingPackets,
-    world::{pker::WorldPacker, player::Players, state::WorldState},
+    world::{logic::color::Hsv, pker::WorldPacker, player::Players},
 };
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
@@ -29,10 +28,6 @@ pub struct RelTarget<'r> {
 pub struct World<'w> {
     tick_ct: u16,
     pub pker: WorldPacker<'w>,
-
-    /// Legacy relay, will be deprecated in the future
-    state: WorldState,
-
     codec: &'w Codec,
     players: Players,
 }
@@ -40,7 +35,6 @@ pub struct World<'w> {
 impl<'w> World<'w> {
     pub fn new(codec: &'w Codec) -> Self {
         World {
-            state: WorldState::new(),
             pker: WorldPacker::new(codec),
             codec,
             players: Players::default(),
@@ -73,7 +67,7 @@ impl<'w> World<'w> {
         let (spawn_pt, spawn_pt_codec) =
             (logic::spawn::player_spawn_pt(), qua::loc(self.codec.schema()));
         let (hsv, hsv_codec) = (
-            logic::color::hsv(),
+            logic::color::rand(),
             qua::hsv(self.codec.schema()), //
         );
 
@@ -90,15 +84,11 @@ impl<'w> World<'w> {
             (FieldName::ColorV, hsv_codec.v.encode(hsv.v)),
         ];
 
-        for (field_name, val) in fields.iter() {
-            self.state
-                .save(field_name, rel_target.sid, *val)
-        }
-
         self.players.spawn(
             rel_target.sid,
             spawn_pt_codec.x.decode(enc_x),
             spawn_pt_codec.z.decode(enc_z),
+            Hsv::new(hsv.h, hsv.s, hsv.v),
         );
 
         self.rel_track(&fields, rel_target)
@@ -141,7 +131,6 @@ impl<'w> World<'w> {
 
             let val = reader.read(field_name);
             writer.write(field_name, &val);
-            self.state.save(field_name, sid, val);
 
             logt!("#{sid}: {field_name:?}={val}")
         }
@@ -167,30 +156,33 @@ impl<'w> World<'w> {
     /// // [2, 1, 2, 3, 1, 2, 3]
     /// return [record_count, record1, record2].concat()
     /// ```
-    pub fn sync_buf(&self, sid: u32) -> Vec<u8> {
+    pub fn sync_buf(&self, sid: u32) -> Option<Vec<u8>> {
+        let loc_qua = qua::loc(self.codec.schema());
+        let hsv_qua = qua::hsv(self.codec.schema());
+
         let records: Vec<Vec<u8>> = self
-            .state
-            .world
+            .players
             .iter()
             .filter(|(sid_iter, _)| **sid_iter != sid)
-            .map(|(sid, player_state)| {
-                let mut fields = Vec::<(FieldName, u32)>::new();
-
-                for (field_name, _) in self.codec.schema().fields.iter() {
-                    if let Some(val) = player_state.get(field_name) {
-                        fields.push((field_name.clone(), *val));
-                    }
-                }
+            .map(|(sid, p)| {
+                let [x, y, z] = p.state.pos;
 
                 self.codec.headless_pack(FieldsPack {
                     id: None,
-                    fields: &fields,
+                    fields: &[
+                        (FieldName::LocationX, loc_qua.x.encode(x)),
+                        (FieldName::LocationY, loc_qua.x.encode(y)),
+                        (FieldName::LocationZ, loc_qua.z.encode(z)),
+                        (FieldName::ColorH, hsv_qua.h.encode(p.color.h)),
+                        (FieldName::ColorS, hsv_qua.s.encode(p.color.s)),
+                        (FieldName::ColorV, hsv_qua.v.encode(p.color.v)),
+                    ],
                     sid: *sid,
                 })
             })
             .collect();
 
-        self.batch_pack(records)
+        if records.is_empty() { None } else { Some(self.batch_pack(records)) }
     }
 
     pub fn players_snapshot_buf(&self) -> Option<Vec<u8>> {
@@ -248,6 +240,4 @@ impl<'w> World<'w> {
         }
         buf
     }
-
-    pub fn has_state(&self) -> bool { !self.state.world.is_empty() }
 }

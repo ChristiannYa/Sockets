@@ -1,6 +1,8 @@
 mod intent_queue;
 
-use crate::world::player::intent_queue::PlayerIntentQueue;
+use crate::world::{
+    logic::color::Hsv, player::intent_queue::PlayerIntentQueue,
+};
 use bitp::{
     sim::{Collision, PlayerIntentCmd, PlayerState, Step},
     util::Seq,
@@ -13,8 +15,8 @@ pub struct Players {
 }
 
 impl Players {
-    pub fn spawn(&mut self, sid: u32, x: f32, z: f32) {
-        self.hm.insert(sid, Player::new(x, z));
+    pub fn spawn(&mut self, sid: u32, x: f32, z: f32, color: Hsv) {
+        self.hm.insert(sid, Player::new(x, z, color));
     }
 
     pub fn queue_intent(&mut self, sid: u32, seq: Seq, cmd: PlayerIntentCmd) {
@@ -61,13 +63,15 @@ impl Players {
 pub struct Player {
     pub state: PlayerState,
     pub intent_queue: PlayerIntentQueue,
+    pub color: Hsv,
 }
 
 impl Player {
-    pub fn new(x: f32, z: f32) -> Self {
+    pub fn new(x: f32, z: f32, color: Hsv) -> Self {
         Player {
             state: PlayerState::spawn(x, z),
             intent_queue: PlayerIntentQueue::new(),
+            color,
         }
     }
 }
