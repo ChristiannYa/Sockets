@@ -3,20 +3,18 @@ mod pker;
 pub mod player;
 
 use crate::{
-    codec::{Codec, FieldsPack},
+    codec::Codec,
     rel::retx::PendingPackets,
     world::{logic::color::Hsv, pker::WorldPacker, player::Players},
 };
 use bitp::{
-    bits::{BitReader, BitWriter, DecodeType},
-    logt,
+    bits::{BitReader, BitWriter},
     pkt::FieldName,
     qua,
-    rel::retx::PendingPacket,
     sim::PlayerIntentCmd,
     util::Seq,
 };
-use std::{net::SocketAddr, time::Instant};
+use std::net::SocketAddr;
 
 /// Who to send to and where to track it
 pub struct RelTarget<'r> {
@@ -27,7 +25,7 @@ pub struct RelTarget<'r> {
 
 pub struct World<'w> {
     tick_ct: u16,
-    pub pker: WorldPacker<'w>,
+    pker: WorldPacker<'w>,
     codec: &'w Codec,
     players: Players,
 }
@@ -91,153 +89,32 @@ impl<'w> World<'w> {
             Hsv::new(hsv.h, hsv.s, hsv.v),
         );
 
-        self.rel_track(&fields, rel_target)
+        self.pker.rel_pkting(&fields, rel_target)
     }
 
-    fn rel_track(
-        &self,
-        fields: &[(FieldName, u32)],
-        rel_target: &mut RelTarget,
-    ) -> (Vec<u8>, u8) {
-        let id = self.codec.next_pkt_id();
-        let buf = self.codec.headful_pack(FieldsPack {
-            id: Some(id),
-            fields,
-            sid: rel_target.sid,
-        });
+    // --------------
+    // Paker relays
+    // --------------
 
-        rel_target.pending_pkts.insert(
-            (id, *rel_target.skt_src),
-            PendingPacket::new(id, buf.to_vec(), Instant::now()),
-        );
-
-        (buf, id)
+    pub fn welcome_pkt(&self, rel_target: &mut RelTarget) -> Vec<u8> {
+        self.pker.welcome_pkt(rel_target)
     }
 
-    /// Reads every field out of `buf`, echoing each one into a new packet for
-    /// the broadcast buffer
-    pub fn decode(
+    pub fn sync_pkt(&self, sid: u32) -> Option<Vec<u8>> {
+        self.pker.sync_pkt(sid, &self.players)
+    }
+
+    pub fn players_snapshot_pkt(&self) -> Option<Vec<u8>> {
+        self.pker
+            .players_snapshot_pkt(self.tick_ct, &self.players)
+    }
+
+    pub fn schema_pkt(
         &mut self,
         sid: u32,
         reader: &mut BitReader,
         writer: &mut BitWriter,
     ) -> Vec<u8> {
-        for (field_name, _) in self.codec.schema().fields.iter() {
-            if !reader.isset(field_name)
-                || *field_name == FieldName::DevPacketId
-            {
-                continue;
-            };
-
-            let val = reader.read(field_name);
-            writer.write(field_name, &val);
-
-            logt!("#{sid}: {field_name:?}={val}")
-        }
-
-        let mut buf = self.codec.header_buf(DecodeType::Single);
-        buf.extend(writer.buf());
-        buf
-    }
-
-    /// Returns a buffer containing every other connected player's state to sync a
-    /// newly-joined player.
-    ///
-    /// Layout:
-    /// ```
-    /// let record_count = vec![2];
-    ///
-    /// // 1=record_len, 2=mask_bytes, 3=value_bytes
-    /// // `record_len` is the byte length of the player's `BitWriter::buf()`'s
-    /// // output, including `SessionId` as a "seed" value to identify the record
-    /// let record1 = vec![1, 2, 3];
-    /// let record2 = vec![1, 2, 3];
-    ///
-    /// // [2, 1, 2, 3, 1, 2, 3]
-    /// return [record_count, record1, record2].concat()
-    /// ```
-    pub fn sync_buf(&self, sid: u32) -> Option<Vec<u8>> {
-        let loc_qua = qua::loc(self.codec.schema());
-        let hsv_qua = qua::hsv(self.codec.schema());
-
-        let records: Vec<Vec<u8>> = self
-            .players
-            .iter()
-            .filter(|(sid_iter, _)| **sid_iter != sid)
-            .map(|(sid, p)| {
-                let [x, y, z] = p.state.pos;
-
-                self.codec.headless_pack(FieldsPack {
-                    id: None,
-                    fields: &[
-                        (FieldName::LocationX, loc_qua.x.encode(x)),
-                        (FieldName::LocationY, loc_qua.x.encode(y)),
-                        (FieldName::LocationZ, loc_qua.z.encode(z)),
-                        (FieldName::ColorH, hsv_qua.h.encode(p.color.h)),
-                        (FieldName::ColorS, hsv_qua.s.encode(p.color.s)),
-                        (FieldName::ColorV, hsv_qua.v.encode(p.color.v)),
-                    ],
-                    sid: *sid,
-                })
-            })
-            .collect();
-
-        if records.is_empty() { None } else { Some(self.batch_pack(records)) }
-    }
-
-    pub fn players_snapshot_buf(&self) -> Option<Vec<u8>> {
-        let loc_qua = qua::loc(self.codec.schema());
-
-        let records: Vec<Vec<u8>> = self
-            .players
-            .iter()
-            .map(|(sid, player)| {
-                let [x, y, z] = player.state.pos;
-                self.codec.headless_pack(FieldsPack {
-                    id: None,
-                    fields: &[
-                        (FieldName::LocationX, loc_qua.x.encode(x)),
-                        (FieldName::LocationZ, loc_qua.z.encode(z)),
-                        (FieldName::LocationY, qua::intent::Y.encode(y)),
-                        (
-                            FieldName::Yaw,
-                            qua::intent::YAW.encode(player.state.yaw),
-                        ),
-                    ],
-                    sid: *sid,
-                })
-            })
-            .collect();
-
-        if records.is_empty() {
-            return None;
-        }
-
-        Some(self.snapshot_pack(records))
-    }
-
-    /// `[Data, Batch]` + [World::records_buf]
-    fn batch_pack(&self, records: Vec<Vec<u8>>) -> Vec<u8> {
-        let mut buf = self.codec.header_buf(DecodeType::Batch);
-        buf.extend(Self::records_buf(records));
-        buf
-    }
-
-    /// `[Snapshot, tick_lo, tick_hi]` + [World::records_buf]
-    fn snapshot_pack(&self, records: Vec<Vec<u8>>) -> Vec<u8> {
-        let mut buf = self.codec.snapshot_header_buf(self.tick_ct);
-        buf.extend(Self::records_buf(records));
-        buf
-    }
-
-    /// `[record_ct, (record_len, record)...]`, shared by every packet that
-    /// carries records
-    fn records_buf(records: Vec<Vec<u8>>) -> Vec<u8> {
-        let mut buf = vec![records.len() as u8];
-        for record in records {
-            buf.push(record.len() as u8);
-            buf.extend(record);
-        }
-        buf
+        self.pker.schema_pkt(sid, reader, writer)
     }
 }

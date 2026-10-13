@@ -47,11 +47,11 @@ impl<'c, 'w> Manager<'c, 'w> {
 
     pub fn sim_tick(&mut self) {
         self.world.tick();
-        if let Some(buf) = self.world.players_snapshot_buf() {
+        if let Some(pkt) = self.world.players_snapshot_pkt() {
             self.net.broadcast(crate::net::Broadcast {
                 addrs: self.sess.addrs(),
                 skt_src: None,
-                buf: &buf,
+                buf: &pkt,
             });
         }
     }

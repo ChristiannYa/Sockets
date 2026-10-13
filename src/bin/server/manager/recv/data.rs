@@ -59,7 +59,6 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
 
         self.manager
             .world
-            .pker
             .welcome_pkt(&mut rel_targ)
             .tap(|pkt| self.manager.net.send_to(pkt, self.skt_src));
 
@@ -78,7 +77,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             self.manager.pending_pkts,
         );
 
-        if let Some(sync_buf) = self.manager.world.sync_buf(sid) {
+        if let Some(sync_buf) = self.manager.world.sync_pkt(sid) {
             self.manager
                 .net
                 .send_to(&sync_buf, self.skt_src);
@@ -120,15 +119,15 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             ),
         );
 
-        let world_buf = self
-            .manager
-            .world
-            .decode(sid, reader, &mut writer);
+        let schema_pkt =
+            self.manager
+                .world
+                .schema_pkt(sid, reader, &mut writer);
 
         Broadcast {
             addrs: self.manager.sess.addrs(),
             skt_src: Some(&self.skt_src),
-            buf: &world_buf,
+            buf: &schema_pkt,
         }
         .pipe(|args| match outid {
             Some(outid) => self.manager.net.broadcast_rel(
