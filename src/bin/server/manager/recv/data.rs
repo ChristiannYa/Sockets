@@ -1,6 +1,6 @@
 use crate::{codec::Rel, manager::Manager, net::Broadcast, world::RelTarget};
 use std::{net::SocketAddr, time::Instant};
-use tap::Pipe;
+use tap::{Pipe, Tap};
 
 pub struct DataPkt<'d, 'c, 'w> {
     manager: &'d mut Manager<'c, 'w>,
@@ -57,16 +57,18 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             pending_pkts: self.manager.pending_pkts,
         };
 
-        let welcome_buf = self.manager.world.welcome_buf(&mut rel_targ);
         self.manager
-            .net
-            .send_to(&welcome_buf, self.skt_src);
+            .world
+            .pker
+            .welcome_pkt(&mut rel_targ)
+            .tap(|pkt| self.manager.net.send_to(pkt, self.skt_src));
 
         // Capture world state before spawning player and saving its state in
         // the world/session
         let is_world_stateful = self.manager.world.has_state();
 
-        let (spawn_buf, sb_id) = self.manager.world.spawn_player(&mut rel_targ);
+        let (spawn_buf, sb_id) =
+            self.manager.world.spawn_player(&mut rel_targ);
         self.manager
             .net
             .send_to(&spawn_buf, self.skt_src);

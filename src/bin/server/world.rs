@@ -1,11 +1,12 @@
 pub mod logic;
+mod pker;
 pub mod player;
 mod state;
 
 use crate::{
     codec::{Codec, FieldsPack},
     rel::retx::PendingPackets,
-    world::{player::Players, state::WorldState},
+    world::{pker::WorldPacker, player::Players, state::WorldState},
 };
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
@@ -27,6 +28,7 @@ pub struct RelTarget<'r> {
 
 pub struct World<'w> {
     tick_ct: u16,
+    pub pker: WorldPacker<'w>,
 
     /// Legacy relay, will be deprecated in the future
     state: WorldState,
@@ -39,6 +41,7 @@ impl<'w> World<'w> {
     pub fn new(codec: &'w Codec) -> Self {
         World {
             state: WorldState::new(),
+            pker: WorldPacker::new(codec),
             codec,
             players: Players::default(),
             tick_ct: 0,
@@ -58,15 +61,6 @@ impl<'w> World<'w> {
         cmd: PlayerIntentCmd,
     ) {
         self.players.queue_intent(sid, seq, cmd)
-    }
-
-    /// Returns a reliable buffer with the [FieldName::DevIsNewPlayer] flag
-    /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
-    /// [FieldName::DevIsNewPlayer]
-    pub fn welcome_buf(&self, rel_target: &mut RelTarget) -> Vec<u8> {
-        let (buf, _) =
-            self.rel_track(&[(FieldName::DevIsNewPlayer, 1)], rel_target);
-        buf
     }
 
     /// Spawns player in the simulation
