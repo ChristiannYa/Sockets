@@ -7,7 +7,6 @@ use crate::{
     codec::Codec,
     rel::retx::PendingPackets,
     world::{
-        logic::color::Hsv,
         pker::WorldPacker,
         player::{Player, Players},
     },
@@ -16,6 +15,7 @@ use bitp::{
     bits::{BitReader, BitWriter},
     pkt::FieldName,
     qua,
+    util::color::Hsv,
 };
 use std::net::SocketAddr;
 
@@ -60,13 +60,14 @@ impl<'w> World<'w> {
         &mut self,
         rel_target: &mut RelTarget,
     ) -> (Vec<u8>, u8) {
-        let (spawn_pt, spawn_pt_codec) =
-            (logic::spawn::player_spawn_pt(), qua::loc(self.codec.schema()));
+        let (spawn_pt, spawn_pt_codec) = (
+            logic::spawn::player_spawn_pt(),
+            qua::loc(self.codec.schema()), //
+        );
         let (hsv, hsv_codec) = (
-            logic::color::rand(),
+            Hsv::rand(),
             qua::hsv(self.codec.schema()), //
         );
-
         let (enc_x, enc_z) = (
             spawn_pt_codec.x.encode(spawn_pt.x),
             spawn_pt_codec.z.encode(spawn_pt.z),
