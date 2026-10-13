@@ -1,17 +1,20 @@
 mod intent_queue;
 
 use crate::world::{
-    logic::color::Hsv, player::intent_queue::PlayerIntentQueue,
+    self, logic::color::Hsv, player::intent_queue::PlayerIntentQueue,
 };
-use bitp::sim::{Collision, PlayerState, Step};
+use bitp::sim::PlayerState;
 use std::collections::HashMap;
 
-#[derive(Default)]
+pub type PlayersHM = HashMap<u32, Player>;
+
 pub struct Players {
-    hm: HashMap<u32, Player>,
+    hm: PlayersHM,
 }
 
 impl Players {
+    pub fn new() -> Self { Players { hm: HashMap::new() } }
+
     pub fn iter(&self) -> impl Iterator<Item = (&u32, &Player)> {
         self.hm.iter()
     }
@@ -24,35 +27,11 @@ impl Players {
         self.hm.insert(sid, Player::new(x, z, color));
     }
 
-    pub fn tick(&mut self) {
-        self.step_all();
-        self.resolve_collisions()
-    }
+    pub fn sim_tick(&mut self) { world::sim::tick(&mut self.hm); }
+}
 
-    fn step_all(&mut self) {
-        for player in self.hm.values_mut() {
-            let sim_intent = player.intent_queue.next();
-            Step::new(&mut player.state, &sim_intent).run();
-        }
-    }
-
-    fn resolve_collisions(&mut self) {
-        // Sorted by sid, because HashMap iteration order is random
-        let mut states: Vec<(u32, &mut PlayerState)> = self
-            .hm
-            .iter_mut()
-            .map(|(sid, p)| (*sid, &mut p.state))
-            .collect();
-        states.sort_unstable_by_key(|(sid, _)| *sid);
-
-        Collision::new(
-            states
-                .into_iter()
-                .map(|(_, p_s)| p_s)
-                .collect(),
-        )
-        .resolve();
-    }
+impl Default for Players {
+    fn default() -> Self { Self::new() }
 }
 
 pub struct Player {

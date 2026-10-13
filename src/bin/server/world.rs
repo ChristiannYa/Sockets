@@ -1,6 +1,7 @@
 pub mod logic;
 mod pker;
 pub mod player;
+mod sim;
 
 use crate::{
     codec::Codec,
@@ -45,7 +46,7 @@ impl<'w> World<'w> {
     /// Advances the simulation by 1 tick
     pub fn tick(&mut self) {
         self.tick_ct = self.tick_ct.wrapping_add(1);
-        self.players.tick();
+        self.players.sim_tick();
     }
 
     pub fn player_mut_ref(&mut self, sid: u32) -> Option<&mut Player> {
