@@ -35,9 +35,9 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
             return;
         };
 
-        self.manager
-            .world
-            .queue_player_intent(self.sid, seq, cmd);
+        if let Some(player) = self.manager.world.player_ref(self.sid) {
+            player.intent_queue.queue(seq, cmd);
+        }
     }
 
     fn decode(&self) -> Option<(Seq, PlayerIntentCmd)> {

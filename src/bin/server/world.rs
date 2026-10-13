@@ -5,7 +5,11 @@ pub mod player;
 use crate::{
     codec::Codec,
     rel::retx::PendingPackets,
-    world::{logic::color::Hsv, pker::WorldPacker, player::Players},
+    world::{
+        logic::color::Hsv,
+        pker::WorldPacker,
+        player::{Player, Players},
+    },
 };
 use bitp::{
     bits::{BitReader, BitWriter},
@@ -46,13 +50,8 @@ impl<'w> World<'w> {
         self.players.tick();
     }
 
-    pub fn queue_player_intent(
-        &mut self,
-        sid: u32,
-        seq: Seq,
-        cmd: PlayerIntentCmd,
-    ) {
-        self.players.queue_intent(sid, seq, cmd)
+    pub fn player_ref(&mut self, sid: u32) -> Option<&mut Player> {
+        self.players.by_sid_mut_ref(sid)
     }
 
     /// Spawns player in the simulation
@@ -109,7 +108,7 @@ impl<'w> World<'w> {
             .players_snapshot_pkt(self.tick_ct, &self.players)
     }
 
-    pub fn schema_pkt(
+    pub fn schema_kt(
         &mut self,
         sid: u32,
         reader: &mut BitReader,

@@ -3,10 +3,7 @@ mod intent_queue;
 use crate::world::{
     logic::color::Hsv, player::intent_queue::PlayerIntentQueue,
 };
-use bitp::{
-    sim::{Collision, PlayerIntentCmd, PlayerState, Step},
-    util::Seq,
-};
+use bitp::sim::{Collision, PlayerState, Step};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -15,14 +12,16 @@ pub struct Players {
 }
 
 impl Players {
-    pub fn spawn(&mut self, sid: u32, x: f32, z: f32, color: Hsv) {
-        self.hm.insert(sid, Player::new(x, z, color));
+    pub fn iter(&self) -> impl Iterator<Item = (&u32, &Player)> {
+        self.hm.iter()
     }
 
-    pub fn queue_intent(&mut self, sid: u32, seq: Seq, cmd: PlayerIntentCmd) {
-        if let Some(player) = self.hm.get_mut(&sid) {
-            player.intent_queue.queue(seq, cmd);
-        }
+    pub fn by_sid_mut_ref(&mut self, sid: u32) -> Option<&mut Player> {
+        self.hm.get_mut(&sid)
+    }
+
+    pub fn spawn(&mut self, sid: u32, x: f32, z: f32, color: Hsv) {
+        self.hm.insert(sid, Player::new(x, z, color));
     }
 
     pub fn tick(&mut self) {
@@ -53,10 +52,6 @@ impl Players {
                 .collect(),
         )
         .resolve();
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&u32, &Player)> {
-        self.hm.iter()
     }
 }
 
