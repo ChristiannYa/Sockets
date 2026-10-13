@@ -24,12 +24,6 @@ pub struct PlayerIntentCmd {
     pub edge_cts: Edges<u8>,
 }
 
-impl PlayerIntentCmd {
-    pub fn new(held: Held, edge_cts: Edges<u8>) -> Self {
-        PlayerIntentCmd { held, edge_cts }
-    }
-}
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PlayerIntentSim {
     pub held: Held,

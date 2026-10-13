@@ -53,10 +53,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         }
 
         let mut reader = self.manager.codec.reader(self.buf);
-        if !INTENT_FIELDS
-            .iter()
-            .all(|field_name| reader.isset(field_name))
-        {
+        if !INTENT_FIELDS.iter().all(|field_name| reader.isset(field_name)) {
             return None;
         }
 
@@ -70,7 +67,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
 
         let held = Held { mv_x, mv_z, yaw, crouch };
         let edges = Edges { jump: jump_ct };
-        let cmd = PlayerIntentCmd::new(held, edges);
+        let cmd = PlayerIntentCmd { held, edge_cts: edges };
 
         Some((seq, cmd))
     }

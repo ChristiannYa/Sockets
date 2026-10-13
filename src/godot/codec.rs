@@ -142,7 +142,7 @@ impl UdpCodec {
     ) -> PackedByteArray {
         let held = Held { mv_x, mv_z, yaw, crouch };
         let edge_cts = Edges { jump: jump_ct };
-        let cmd = PlayerIntentCmd::new(held, edge_cts);
+        let cmd = PlayerIntentCmd { held, edge_cts };
         PackedByteArray::from(intent::encode(&self.schema, seq, &cmd))
     }
 }
