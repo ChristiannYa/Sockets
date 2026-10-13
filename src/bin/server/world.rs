@@ -2,6 +2,7 @@ pub mod logic;
 mod pker;
 pub mod player;
 mod sim;
+mod util;
 
 use crate::{
     codec::Codec,
@@ -9,13 +10,13 @@ use crate::{
     world::{
         pker::WorldPacker,
         player::{Player, Players},
+        util::Hsv,
     },
 };
 use bitp::{
     bits::{BitReader, BitWriter},
     pkt::FieldName,
     qua,
-    util::color::Hsv,
 };
 use std::net::SocketAddr;
 

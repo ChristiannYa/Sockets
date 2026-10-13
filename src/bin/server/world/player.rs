@@ -1,7 +1,9 @@
 mod intent_queue;
 
-use crate::world::{self, player::intent_queue::PlayerIntentQueue};
-use bitp::{sim::PlayerState, util::color::Hsv};
+use crate::world::{
+    self, player::intent_queue::PlayerIntentQueue, util::Hsv,
+};
+use bitp::sim::PlayerState;
 use std::collections::HashMap;
 
 pub type PlayersHM = HashMap<u32, Player>;

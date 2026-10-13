@@ -1,7 +1,6 @@
 mod seq;
 
 pub use seq::Seq;
-pub mod color;
 
 #[macro_export]
 macro_rules! logt {
