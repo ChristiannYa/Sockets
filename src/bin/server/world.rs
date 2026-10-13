@@ -1,4 +1,3 @@
-pub mod logic;
 mod pker;
 pub mod player;
 mod sim;
@@ -10,7 +9,7 @@ use crate::{
     world::{
         pker::WorldPacker,
         player::{Player, Players},
-        util::Hsv,
+        util::{Hsv, rand_disk_pt_xz},
     },
 };
 use bitp::{
@@ -61,8 +60,8 @@ impl<'w> World<'w> {
         &mut self,
         rel_target: &mut RelTarget,
     ) -> (Vec<u8>, u8) {
-        let (spawn_pt, spawn_pt_codec) = (
-            logic::spawn::player_spawn_pt(),
+        let ((spawn_x, spawn_z), spawn_pt_codec) = (
+            rand_disk_pt_xz(10.0),
             qua::loc(self.codec.schema()), //
         );
         let (hsv, hsv_codec) = (
@@ -70,8 +69,8 @@ impl<'w> World<'w> {
             qua::hsv(self.codec.schema()), //
         );
         let (enc_x, enc_z) = (
-            spawn_pt_codec.x.encode(spawn_pt.x),
-            spawn_pt_codec.z.encode(spawn_pt.z),
+            spawn_pt_codec.x.encode(spawn_x),
+            spawn_pt_codec.z.encode(spawn_z), //
         );
 
         let fields = [

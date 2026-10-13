@@ -18,3 +18,13 @@ impl Hsv {
         }
     }
 }
+
+/// Returns a uniformly random `(x, z)` point inside a disk of radius `rad`
+/// centered at the origin of the XZ plane.
+pub fn rand_disk_pt_xz(rad: f32) -> (f32, f32) {
+    let angle = rand::random::<f32>() * std::f32::consts::TAU;
+    let rad = rad * rand::random::<f32>().sqrt();
+    let x: f32 = rad * angle.cos();
+    let z: f32 = rad * angle.sin();
+    (x, z)
+}
