@@ -1,5 +1,6 @@
+use crate::world::player::edges;
 use bitp::{
-    sim::{PlayerEdgeMapper, PlayerIntentCmd, PlayerIntentSim},
+    sim::{Edges, PlayerIntentCmd, PlayerIntentSim},
     util::Seq,
 };
 use std::collections::VecDeque;
@@ -18,7 +19,10 @@ pub struct PlayerIntentQueue {
     /// reconciliation
     simed_seq: Seq,
 
-    edge_mapper: PlayerEdgeMapper,
+    /// Edge counters from the intent the simulation most recently simulated.
+    /// None until the first intent, which only seeds it, so a player whose
+    /// counters aren't 0 can't fire phantom events.
+    simed_edge_cts: Option<Edges<u8>>,
 }
 
 impl PlayerIntentQueue {
@@ -28,15 +32,12 @@ impl PlayerIntentQueue {
             last_sim: PlayerIntentSim::default(),
             latest_seq: None,
             simed_seq: Seq(0),
-            edge_mapper: PlayerEdgeMapper::default(),
+            simed_edge_cts: None,
         }
     }
 
     pub fn queue(&mut self, seq: Seq, cmd: PlayerIntentCmd) {
-        if self
-            .latest_seq
-            .is_some_and(|latest| !seq.is_newer_than(latest))
-        {
+        if self.latest_seq.is_some_and(|latest| !seq.is_newer_than(latest)) {
             return; // duplicate or stale
         }
         self.latest_seq = Some(seq);
@@ -53,14 +54,52 @@ impl PlayerIntentQueue {
     pub fn next(&mut self) -> PlayerIntentSim {
         match self.queue.pop_front() {
             Some((simed_seq, cmd)) => {
+                let edges = match self.simed_edge_cts {
+                    Some(prev) => edges::diffs(cmd.edge_cts, prev),
+                    None => Edges::default(),
+                };
+                self.simed_edge_cts = Some(cmd.edge_cts);
+
                 self.simed_seq = simed_seq;
-                self.last_sim = PlayerIntentSim::new(
-                    cmd.held,
-                    self.edge_mapper.to_sim(cmd.edge_cts),
-                );
+                self.last_sim = PlayerIntentSim::new(cmd.held, edges);
             }
             None => self.last_sim = self.last_sim.held_only(),
         }
         self.last_sim
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitp::sim::Held;
+
+    fn cmd(jump_ct: u8) -> PlayerIntentCmd {
+        PlayerIntentCmd {
+            held: Held::default(),
+            edge_cts: Edges { jump: jump_ct },
+        }
+    }
+
+    #[test]
+    fn first_intent_only_seeds() {
+        let mut q = PlayerIntentQueue::new();
+        // Not 0 on purpose: a joiner's counter can start anywhere
+        q.queue(Seq(0), cmd(5));
+        q.queue(Seq(1), cmd(5));
+
+        assert!(!q.next().edges.jump);
+        assert!(!q.next().edges.jump);
+    }
+
+    #[test]
+    fn counter_change_fires_once() {
+        let mut q = PlayerIntentQueue::new();
+        q.queue(Seq(0), cmd(1));
+        q.queue(Seq(1), cmd(2));
+        q.queue(Seq(2), cmd(2));
+
+        let jumps: Vec<bool> = (0..3).map(|_| q.next().edges.jump).collect();
+        assert_eq!(jumps, [false, true, false]);
     }
 }

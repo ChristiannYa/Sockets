@@ -1,3 +1,4 @@
+mod edges;
 mod intent_queue;
 
 use crate::world::{

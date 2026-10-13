@@ -1,7 +1,3 @@
-mod edge_mapping;
-
-pub use edge_mapping::PlayerEdgeMapper;
-
 /// State the player is *in*.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Held {
