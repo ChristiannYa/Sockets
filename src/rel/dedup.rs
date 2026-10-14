@@ -16,15 +16,9 @@ pub struct SeenPacketIds {
 }
 
 impl SeenPacketIds {
-    pub fn new() -> Self {
-        SeenPacketIds {
-            ids: HashMap::new(),
-        }
-    }
+    pub fn new() -> Self { SeenPacketIds { ids: HashMap::new() } }
 
-    pub fn is_seen(&self, id: u8) -> bool {
-        self.ids.contains_key(&id)
-    }
+    pub fn is_seen(&self, id: u8) -> bool { self.ids.contains_key(&id) }
 
     pub fn mark_seen(&mut self, id: u8, now: Instant) {
         self.ids.insert(id, now);
@@ -36,13 +30,9 @@ impl SeenPacketIds {
             .retain(|_, seen_at| now.duration_since(*seen_at) < SEEN_CUTOFF);
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.ids.is_empty()
-    }
+    pub fn is_empty(&self) -> bool { self.ids.is_empty() }
 }
 
 impl Default for SeenPacketIds {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
