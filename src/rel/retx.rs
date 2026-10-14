@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
-pub const RETRY_INTV: Duration = Duration::from_millis(100);
-pub const RETRY_MAX_ATTEMPTS: u8 = 5;
+const RETRY_INTV: Duration = Duration::from_millis(100);
+const RETRY_MAX_ATTEMPTS: u8 = 5;
 
 pub enum RetryAction {
     Wait,
@@ -22,12 +22,7 @@ impl PendingPacket {
     // Taking `now` as a parameter rather than calling `Instant::now()`
     // keeps the function testable
     pub fn new(id: u8, bytes: Vec<u8>, now: Instant) -> Self {
-        PendingPacket {
-            id,
-            bytes,
-            last_sent: now,
-            retries: 0,
-        }
+        PendingPacket { id, bytes, last_sent: now, retries: 0 }
     }
 }
 
@@ -38,7 +33,9 @@ impl PendingPacket {
     /// Does not mutate or do anything, the caller will apply the result.
     pub fn retry_action(&self, now: Instant) -> RetryAction {
         match () {
-            _ if now.duration_since(self.last_sent) < RETRY_INTV => RetryAction::Wait,
+            _ if now.duration_since(self.last_sent) < RETRY_INTV => {
+                RetryAction::Wait
+            }
             _ if self.retries >= RETRY_MAX_ATTEMPTS => RetryAction::GiveUp,
             _ => RetryAction::Resend,
         }

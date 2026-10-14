@@ -6,7 +6,7 @@ use std::{
 /// Cutoff for how long a seen id is remembered before forgotten.
 /// Longer than the retry max window to allow for one las in-flight duplicate
 /// that was already on the wire when the sender gave up.
-pub const SEEN_CUTOFF: Duration = Duration::from_secs(2);
+const SEEN_CUTOFF: Duration = Duration::from_secs(2);
 
 /// Tracks ids already processed from a single sender, so a retransmitted
 /// duplicate isn't applied twice.
