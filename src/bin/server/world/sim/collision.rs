@@ -1,4 +1,4 @@
-use crate::sim::{PlayerState, consts::DIAM};
+use bitp::sim::{PlayerState, consts::DIAM};
 
 const PASSES: usize = 4;
 const EPS: f32 = 1e-4;
@@ -62,7 +62,7 @@ fn split(p_a: &mut PlayerState, p_b: &mut PlayerState) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::consts::RADIUS;
+    use bitp::sim::consts::RADIUS;
 
     fn dist(p_a: &PlayerState, p_b: &PlayerState) -> f32 {
         (p_b.pos[0] - p_a.pos[0]).hypot(p_b.pos[2] - p_a.pos[2])

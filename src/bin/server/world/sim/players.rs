@@ -1,5 +1,6 @@
+use super::collision::Collision;
 use crate::world::player::PlayersHM;
-use bitp::sim::{Collision, PlayerState, Step};
+use bitp::sim::{PlayerState, Step};
 
 pub fn tick(hm: &mut PlayersHM) {
     step(hm);
@@ -15,17 +16,10 @@ fn step(hm: &mut PlayersHM) {
 
 fn resolve_collisions(hm: &mut PlayersHM) {
     // Sorted by sid, because HashMap iteration order is random
-    let mut states: Vec<(u32, &mut PlayerState)> = hm
-        .iter_mut()
-        .map(|(sid, p)| (*sid, &mut p.state))
-        .collect();
+    let mut states: Vec<(u32, &mut PlayerState)> =
+        hm.iter_mut().map(|(sid, p)| (*sid, &mut p.state)).collect();
     states.sort_unstable_by_key(|(sid, _)| *sid);
 
-    Collision::new(
-        states
-            .into_iter()
-            .map(|(_, p_s)| p_s)
-            .collect(),
-    )
-    .resolve();
+    Collision::new(states.into_iter().map(|(_, p_s)| p_s).collect())
+        .resolve();
 }
