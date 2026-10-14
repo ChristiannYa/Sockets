@@ -8,7 +8,7 @@ use crate::manager::{
 use bitp::pkt::PacketKind;
 use std::net::SocketAddr;
 
-pub fn buf(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
+pub fn cli(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
     let Some(&kind) = buf.first() else {
         return;
     };
