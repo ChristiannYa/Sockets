@@ -2,7 +2,7 @@ use crate::{
     bits::{BitWriter, PacketSchema},
     pkt::{FieldName, PacketKind},
     qua,
-    sim::PlayerIntentCmd,
+    sim::PlayerIntent,
 };
 
 /// No sid: Obtained internally using the client's address.
@@ -11,7 +11,7 @@ use crate::{
 pub fn encode(
     schema: &PacketSchema,
     seq: u8,
-    intent: &PlayerIntentCmd,
+    intent: &PlayerIntent<u8>,
 ) -> Vec<u8> {
     let mut writer = BitWriter::new(schema);
 
@@ -19,7 +19,7 @@ pub fn encode(
     writer.write(&FieldName::IntentMvX, &qua::intent::MV.encode(intent.held.mv_x));
     writer.write(&FieldName::IntentMvZ, &qua::intent::MV.encode(intent.held.mv_z));
     writer.write(&FieldName::IntentYaw, &qua::intent::YAW.encode(intent.held.yaw));
-    writer.write(&FieldName::IntentJump, &(intent.edge_cts.jump as u32));
+    writer.write(&FieldName::IntentJump, &(intent.edges.jump as u32));
     writer.write(&FieldName::IntentCrouch, &(intent.held.crouch as u32));
 
     let mut pkt = vec![PacketKind::Intent as u8];
