@@ -5,6 +5,8 @@ mod state;
 mod step;
 
 pub use collision::Collision;
-pub use intent::{Edges, Held, PlayerIntent};
+pub use intent::{
+    PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld,
+};
 pub use state::PlayerState;
 pub use step::Step;

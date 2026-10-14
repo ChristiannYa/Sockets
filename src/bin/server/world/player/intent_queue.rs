@@ -1,6 +1,6 @@
 use crate::world::player::edges;
 use bitp::{
-    sim::{Edges, PlayerIntent},
+    sim::{PlayerIntentSim, PlayerIntentSimEdges},
     util::Seq,
 };
 use std::collections::VecDeque;
@@ -8,8 +8,8 @@ use std::collections::VecDeque;
 const QUEUE_MAX: usize = 8;
 
 pub struct PlayerIntentQueue {
-    queue: VecDeque<(Seq, PlayerIntent<u8>)>,
-    last_sim: PlayerIntent<bool>,
+    queue: VecDeque<(Seq, PlayerIntentSim<u8>)>,
+    last_sim: PlayerIntentSim<bool>,
 
     /// Newest sequence that arrived
     latest_seq: Option<Seq>,
@@ -22,21 +22,21 @@ pub struct PlayerIntentQueue {
     /// Edge counters from the intent the simulation most recently simulated.
     /// None until the first intent, which only seeds it, so a player whose
     /// counters aren't 0 can't fire phantom events.
-    simed_edge_cts: Option<Edges<u8>>,
+    simed_edge_cts: Option<PlayerIntentSimEdges<u8>>,
 }
 
 impl PlayerIntentQueue {
     pub fn new() -> Self {
         PlayerIntentQueue {
             queue: VecDeque::new(),
-            last_sim: PlayerIntent::<bool>::default(),
+            last_sim: PlayerIntentSim::<bool>::default(),
             latest_seq: None,
             simed_seq: Seq(0),
             simed_edge_cts: None,
         }
     }
 
-    pub fn queue(&mut self, seq: Seq, cmd: PlayerIntent<u8>) {
+    pub fn queue(&mut self, seq: Seq, cmd: PlayerIntentSim<u8>) {
         if self.latest_seq.is_some_and(|latest| !seq.is_newer_than(latest)) {
             return; // duplicate or stale
         }
@@ -51,18 +51,18 @@ impl PlayerIntentQueue {
     /// Pops the next queued intent for this tick and returns it.
     /// If the queue is empty it repeats the last intent with the edge fields
     /// reset so a lost packet can't retrigger them
-    pub fn next(&mut self) -> PlayerIntent<bool> {
+    pub fn next(&mut self) -> PlayerIntentSim<bool> {
         match self.queue.pop_front() {
             Some((simed_seq, cmd)) => {
                 let edges = match self.simed_edge_cts {
                     Some(prev) => edges::diffs(cmd.edges, prev),
-                    None => Edges::default(),
+                    None => PlayerIntentSimEdges::default(),
                 };
                 self.simed_edge_cts = Some(cmd.edges);
 
                 self.simed_seq = simed_seq;
                 self.last_sim =
-                    PlayerIntent::<bool> { held: cmd.held, edges };
+                    PlayerIntentSim::<bool> { held: cmd.held, edges };
             }
             None => self.last_sim = self.last_sim.held_only(),
         }
@@ -73,12 +73,12 @@ impl PlayerIntentQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitp::sim::Held;
+    use bitp::sim::PlayerIntentSimHeld;
 
-    fn cmd(jump_ct: u8) -> PlayerIntent<u8> {
-        PlayerIntent::<u8> {
-            held: Held::default(),
-            edges: Edges { jump: jump_ct },
+    fn cmd(jump_ct: u8) -> PlayerIntentSim<u8> {
+        PlayerIntentSim::<u8> {
+            held: PlayerIntentSimHeld::default(),
+            edges: PlayerIntentSimEdges { jump: jump_ct },
         }
     }
 

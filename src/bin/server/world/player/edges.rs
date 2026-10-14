@@ -1,13 +1,16 @@
 //! Just for the sake of having an individual module to do some testing
 
-use bitp::sim::Edges;
+use bitp::sim::PlayerIntentSimEdges;
 
 /// Which counters differ between the edges.
 ///
 /// Wraping needs no special case because any difference counts (7 -> 0
 /// included)
-pub fn diffs(a: Edges<u8>, b: Edges<u8>) -> Edges<bool> {
-    Edges {
+pub fn diffs(
+    a: PlayerIntentSimEdges<u8>,
+    b: PlayerIntentSimEdges<u8>,
+) -> PlayerIntentSimEdges<bool> {
+    PlayerIntentSimEdges {
         jump: a.jump != b.jump,
         // shot: a.shot != b.shot
     }
@@ -17,7 +20,9 @@ pub fn diffs(a: Edges<u8>, b: Edges<u8>) -> Edges<bool> {
 mod tests {
     use super::*;
 
-    fn cts(jump: u8) -> Edges<u8> { Edges { jump } }
+    fn cts(jump: u8) -> PlayerIntentSimEdges<u8> {
+        PlayerIntentSimEdges { jump }
+    }
 
     #[test]
     fn changed_counter_fires() {

@@ -2,7 +2,7 @@ use crate::{
     bits::{BitWriter, PacketSchema},
     pkt::{FieldName, PacketKind},
     qua,
-    sim::PlayerIntent,
+    sim::PlayerIntentSim,
 };
 
 /// No sid: Obtained internally using the client's address.
@@ -11,7 +11,7 @@ use crate::{
 pub fn encode(
     schema: &PacketSchema,
     seq: u8,
-    intent: &PlayerIntent<u8>,
+    intent: &PlayerIntentSim<u8>,
 ) -> Vec<u8> {
     let mut writer = BitWriter::new(schema);
 

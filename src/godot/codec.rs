@@ -3,7 +3,7 @@ use crate::{
     intent,
     pkt::{FIELD_LENGTHS, PacketKind},
     qua,
-    sim::{Edges, Held, PlayerIntent},
+    sim::{PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld},
 };
 use godot::{
     meta::ToGodot,
@@ -140,9 +140,9 @@ impl UdpCodec {
         crouch: bool,
         jump_ct: u8,
     ) -> PackedByteArray {
-        let held = Held { mv_x, mv_z, yaw, crouch };
-        let edge_cts = Edges { jump: jump_ct };
-        let cmd = PlayerIntent::<u8> { held, edges: edge_cts };
+        let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, crouch };
+        let edge_cts = PlayerIntentSimEdges { jump: jump_ct };
+        let cmd = PlayerIntentSim::<u8> { held, edges: edge_cts };
         PackedByteArray::from(intent::encode(&self.schema, seq, &cmd))
     }
 }

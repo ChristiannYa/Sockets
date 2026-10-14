@@ -3,19 +3,19 @@ use crate::sim::{
         CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT,
         JUMP_VEL, SPEED, TICK_DT,
     },
-    intent::PlayerIntent,
+    intent::PlayerIntentSim,
     state::PlayerState,
 };
 
 pub struct Step<'a> {
     p: &'a mut PlayerState,
-    sim_intent: &'a PlayerIntent<bool>,
+    sim_intent: &'a PlayerIntentSim<bool>,
 }
 
 impl<'a> Step<'a> {
     pub fn new(
         p: &'a mut PlayerState,
-        sim_intent: &'a PlayerIntent<bool>,
+        sim_intent: &'a PlayerIntentSim<bool>,
     ) -> Self {
         Step { p, sim_intent }
     }
@@ -101,7 +101,7 @@ fn move_toward(from: f32, to: f32, delta: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::sim::{Edges, Held};
+    use crate::sim::{PlayerIntentSimEdges, PlayerIntentSimHeld};
 
     use super::*;
 
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn gravity_spawned_stays_put() {
         let mut p = PlayerState::spawn(3.0, -2.0);
-        let inp = PlayerIntent::<bool>::default();
+        let inp = PlayerIntentSim::<bool>::default();
 
         for _ in 0..60 {
             Step::new(&mut p, &inp).run();
@@ -125,7 +125,7 @@ mod tests {
         let mut p = PlayerState::spawn(0.0, 0.0);
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
-        let inp = PlayerIntent::<bool>::default();
+        let inp = PlayerIntentSim::<bool>::default();
 
         let mut ticks = 0;
         while !p.is_on_floor && ticks < 1000 {
@@ -142,13 +142,13 @@ mod tests {
     fn mv_hor_fwd_inp_reaches_full_speed_immediately() {
         let mut p = PlayerState::spawn(0.0, 0.0);
 
-        let inp = PlayerIntent::<bool> {
-            held: Held {
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld {
                 // In Godot, "forward" is -z
                 mv_z: -1.0,
                 ..Default::default()
             },
-            edges: Edges { ..Default::default() },
+            edges: PlayerIntentSimEdges { ..Default::default() },
         };
 
         Step::new(&mut p, &inp).run();
@@ -160,8 +160,8 @@ mod tests {
     #[test]
     fn mv_hor_yaw_rotates_movemente() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            held: Held {
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld {
                 mv_z: -1.0,
                 yaw: std::f32::consts::FRAC_PI_2,
                 ..Default::default()
@@ -179,8 +179,12 @@ mod tests {
     #[test]
     fn mv_hor_diagonal_input_is_clamped() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            held: Held { mv_x: 1.0, mv_z: 1.0, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld {
+                mv_x: 1.0,
+                mv_z: 1.0,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -193,8 +197,8 @@ mod tests {
     #[test]
     fn mv_hor_inp_release_stops_in_about_a_third_of_a_second() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            held: Held { mv_z: -1.0, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld { mv_z: -1.0, ..Default::default() },
             ..Default::default()
         };
 
@@ -202,7 +206,7 @@ mod tests {
 
         let mut ticks = 0;
         while p.vel[2] != 0.0 && ticks < 100 {
-            Step::new(&mut p, &PlayerIntent::<bool>::default()).run();
+            Step::new(&mut p, &PlayerIntentSim::<bool>::default()).run();
             ticks += 1;
         }
 
@@ -213,8 +217,8 @@ mod tests {
     #[test]
     fn mv_hor_face_stores_held_yaw() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            held: Held { yaw: 1.2, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld { yaw: 1.2, ..Default::default() },
             ..Default::default()
         };
 
@@ -226,8 +230,8 @@ mod tests {
     #[test]
     fn mv_hor_face_yaw_survives_a_missing_intent() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            held: Held { yaw: 1.2, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld { yaw: 1.2, ..Default::default() },
             ..Default::default()
         };
 
@@ -241,8 +245,8 @@ mod tests {
     // "Apex": Highest point of a jump
     fn mv_ver_jump_airtime_and_apex() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            edges: Edges { jump: true, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            edges: PlayerIntentSimEdges { jump: true, ..Default::default() },
             ..Default::default()
         };
 
@@ -252,7 +256,7 @@ mod tests {
         let mut ticks = 1;
         let mut apex = p.pos[1];
         while !p.is_on_floor && ticks < 200 {
-            Step::new(&mut p, &PlayerIntent::<bool>::default()).run();
+            Step::new(&mut p, &PlayerIntentSim::<bool>::default()).run();
             apex = apex.max(p.pos[1]);
             ticks += 1;
         }
@@ -272,8 +276,8 @@ mod tests {
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
 
-        let inp = PlayerIntent::<bool> {
-            edges: Edges { jump: true, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            edges: PlayerIntentSimEdges { jump: true, ..Default::default() },
             ..Default::default()
         };
 
@@ -286,8 +290,8 @@ mod tests {
     #[test]
     fn mv_ver_crouch_takes_ten_ticks() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            held: Held { crouch: true, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld { crouch: true, ..Default::default() },
             ..Default::default()
         };
 
@@ -307,8 +311,8 @@ mod tests {
     #[test]
     fn mv_ver_crouch_release_regrows() {
         let mut p = PlayerState::spawn(0.0, 0.0);
-        let inp = PlayerIntent::<bool> {
-            held: Held { crouch: true, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld { crouch: true, ..Default::default() },
             ..Default::default()
         };
         for _ in 0..15 {
@@ -316,7 +320,7 @@ mod tests {
         }
 
         for _ in 0..15 {
-            Step::new(&mut p, &PlayerIntent::<bool>::default()).run();
+            Step::new(&mut p, &PlayerIntentSim::<bool>::default()).run();
         }
 
         assert!(approx(p.height, HEIGHT));
@@ -327,8 +331,8 @@ mod tests {
         let mut p = PlayerState::spawn(0.0, 0.0);
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
-        let inp = PlayerIntent::<bool> {
-            held: Held { crouch: true, ..Default::default() },
+        let inp = PlayerIntentSim::<bool> {
+            held: PlayerIntentSimHeld { crouch: true, ..Default::default() },
             ..Default::default()
         };
 

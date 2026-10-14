@@ -2,7 +2,7 @@ use crate::manager::Manager;
 use bitp::{
     pkt::FieldName,
     qua,
-    sim::{Edges, Held, PlayerIntent},
+    sim::{PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld},
     util::Seq,
 };
 
@@ -40,7 +40,7 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         }
     }
 
-    fn decode(&self) -> Option<(Seq, PlayerIntent<u8>)> {
+    fn decode(&self) -> Option<(Seq, PlayerIntentSim<u8>)> {
         let schema = self.manager.codec.schema();
 
         let payload_ceil_len = INTENT_FIELDS
@@ -65,9 +65,9 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         let jump_ct = reader.read(&FieldName::IntentJump) as u8;
         let crouch = reader.read(&FieldName::IntentCrouch) == 1;
 
-        let held = Held { mv_x, mv_z, yaw, crouch };
-        let edges = Edges { jump: jump_ct };
-        let cmd = PlayerIntent::<u8> { held, edges };
+        let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, crouch };
+        let edges = PlayerIntentSimEdges { jump: jump_ct };
+        let cmd = PlayerIntentSim::<u8> { held, edges };
 
         Some((seq, cmd))
     }
