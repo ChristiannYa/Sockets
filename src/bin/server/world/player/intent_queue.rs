@@ -1,8 +1,5 @@
-use crate::world::player::edges;
-use bitp::{
-    sim::{PlayerIntentSim, PlayerIntentSimEdges},
-    util::Seq,
-};
+use crate::{codec::Seq, world::player::edges};
+use bitp::sim::{PlayerIntentSim, PlayerIntentSimEdges};
 use std::collections::VecDeque;
 
 const QUEUE_MAX: usize = 8;

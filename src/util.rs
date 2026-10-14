@@ -1,7 +1,3 @@
-mod seq;
-
-pub use seq::Seq;
-
 #[macro_export]
 macro_rules! logt {
     ($($arg:tt)*) => {

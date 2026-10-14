@@ -1,9 +1,8 @@
-use crate::manager::Manager;
+use crate::{codec::Seq, manager::Manager};
 use bitp::{
     pkt::FieldName,
     qua,
     sim::{PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld},
-    util::Seq,
 };
 
 const INTENT_FIELDS: [FieldName; 6] = [
