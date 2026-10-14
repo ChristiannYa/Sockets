@@ -1,15 +1,16 @@
 use crate::{
-    codec::{Codec, FieldsPack},
+    codec::{Codec, FieldsPack, Rel},
     world::{RelTarget, player::Players},
 };
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
     logt,
-    pkt::FieldName,
+    pkt::{FieldName, PacketKind},
     qua,
     rel::retx::PendingPacket,
 };
 use std::time::Instant;
+use tap::Pipe;
 
 pub struct WorldPacker<'w> {
     codec: &'w Codec,
@@ -53,7 +54,7 @@ impl<'w> WorldPacker<'w> {
             .map(|(sid, p)| {
                 let [x, y, z] = p.state.pos;
 
-                self.codec.headless_pack(FieldsPack {
+                self.pk(FieldsPack {
                     id: None,
                     fields: &[
                         (FieldName::LocationX, loc_qua.x.encode(x)),
@@ -68,7 +69,14 @@ impl<'w> WorldPacker<'w> {
             })
             .collect();
 
-        if records.is_empty() { None } else { Some(self.batch_pack(records)) }
+        if records.is_empty() {
+            None
+        } else {
+            let mut buf =
+                self.header(PacketKind::Data, Some(DecodeType::Batch), None);
+            buf.extend(Self::records_buf(records));
+            Some(buf)
+        }
     }
 
     pub fn players_snapshot_pkt(
@@ -82,7 +90,7 @@ impl<'w> WorldPacker<'w> {
             .iter()
             .map(|(sid, player)| {
                 let [x, y, z] = player.state.pos;
-                self.codec.headless_pack(FieldsPack {
+                self.pk(FieldsPack {
                     id: None,
                     fields: &[
                         (FieldName::LocationX, loc_qua.x.encode(x)),
@@ -99,15 +107,20 @@ impl<'w> WorldPacker<'w> {
             .collect();
 
         if records.is_empty() {
-            return None;
+            None
+        } else {
+            let [lo, hi] = tick_ct.to_le_bytes();
+            let mut buf = self.header(PacketKind::Snapshot, None, [lo, hi]);
+            buf.extend(Self::records_buf(records));
+            Some(buf)
         }
-
-        Some(self.snapshot_pack(records, tick_ct))
     }
 
-    /// Reads every set schema field, echoing each one into a new packet for
-    /// the broadcast buffer
-    pub fn schema_pkt(
+    /// Reads every set schema field, writing each one into the writer's
+    /// buffer.
+    /// Returns a fresh packet that contains a header and the writer's updated
+    /// buffer.
+    pub fn set_in_schema_pkt(
         &mut self,
         sid: u32,
         reader: &mut BitReader,
@@ -126,7 +139,8 @@ impl<'w> WorldPacker<'w> {
             logt!("#{sid}: {field_name:?}={val}")
         }
 
-        let mut buf = self.codec.header_buf(DecodeType::Single);
+        let mut buf =
+            self.header(PacketKind::Data, Some(DecodeType::Single), None);
         buf.extend(writer.buf());
         buf
     }
@@ -137,11 +151,17 @@ impl<'w> WorldPacker<'w> {
         rel_target: &mut RelTarget,
     ) -> (Vec<u8>, u8) {
         let id = self.codec.next_pkt_id();
-        let pkt = self.codec.headful_pack(FieldsPack {
-            id: Some(id),
-            fields,
-            sid: rel_target.sid,
-        });
+
+        let pkt = self
+            .header(PacketKind::Data, Some(DecodeType::Single), None)
+            .pipe(|mut buf| {
+                buf.extend(self.pk(FieldsPack {
+                    id: Some(id),
+                    fields,
+                    sid: rel_target.sid,
+                }));
+                buf
+            });
 
         rel_target.pending_pkts.insert(
             (id, *rel_target.skt_src),
@@ -151,18 +171,42 @@ impl<'w> WorldPacker<'w> {
         (pkt, id)
     }
 
-    /// `[Data, Batch]` + [World::records_buf]
-    fn batch_pack(&self, records: Vec<Vec<u8>>) -> Vec<u8> {
-        let mut buf = self.codec.header_buf(DecodeType::Batch);
-        buf.extend(Self::records_buf(records));
+    pub fn header<I>(
+        &self,
+        kind: PacketKind,
+        dec: Option<DecodeType>,
+        extra: I,
+    ) -> Vec<u8>
+    where
+        I: IntoIterator<Item = u8>,
+    {
+        let extra = extra.into_iter();
+        let mut buf = Vec::with_capacity(2 + extra.size_hint().0);
+
+        buf.push(kind as u8);
+        if let Some(dec) = dec {
+            buf.push(dec as u8)
+        }
+        buf.extend(extra);
+
         buf
     }
 
-    /// `[Snapshot, tick_lo, tick_hi]` + [World::records_buf]
-    fn snapshot_pack(&self, records: Vec<Vec<u8>>, tick_ct: u16) -> Vec<u8> {
-        let mut buf = self.codec.snapshot_header_buf(tick_ct);
-        buf.extend(Self::records_buf(records));
-        buf
+    /// Pack schema-only values on a seeded buffer (seeded internally).
+    fn pk(&self, args: FieldsPack) -> Vec<u8> {
+        let mut writer = self.codec.writer();
+
+        self.codec.seed_pkt(
+            &mut writer,
+            args.sid,
+            args.id.map_or(Rel::None, Rel::Id),
+        );
+
+        for (name, val) in args.fields {
+            writer.write(name, val)
+        }
+
+        writer.buf()
     }
 
     /// `[record_ct, (record_len, record)...]`, shared by every packet that

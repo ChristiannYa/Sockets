@@ -72,15 +72,16 @@ impl<'w> World<'w> {
     }
 
     pub fn players_snapshot_pkt(&self) -> Option<Vec<u8>> {
-        self.pker.players_snapshot_pkt(self.tick_ct, &self.players)
+        self.pker
+            .players_snapshot_pkt(self.tick_ct, &self.players)
     }
 
-    pub fn schema_pkt(
+    pub fn set_in_schema_pkt(
         &mut self,
         sid: u32,
         reader: &mut BitReader,
         writer: &mut BitWriter,
     ) -> Vec<u8> {
-        self.pker.schema_pkt(sid, reader, writer)
+        self.pker.set_in_schema_pkt(sid, reader, writer)
     }
 }

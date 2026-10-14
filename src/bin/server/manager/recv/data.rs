@@ -18,12 +18,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
     }
 
     pub fn recv(&mut self) {
-        if !self
-            .manager
-            .codec
-            .schema()
-            .mask_fits(self.buf)
-        {
+        if !self.manager.codec.schema().mask_fits(self.buf) {
             return;
         }
 
@@ -64,9 +59,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
 
         let (spawn_buf, sb_id) =
             self.manager.world.spawn_player(&mut rel_targ);
-        self.manager
-            .net
-            .send_to(&spawn_buf, self.skt_src);
+        self.manager.net.send_to(&spawn_buf, self.skt_src);
         self.manager.net.broadcast_rel(
             Broadcast {
                 addrs: self.manager.sess.addrs(),
@@ -78,9 +71,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
         );
 
         if let Some(sync_buf) = self.manager.world.sync_pkt(sid) {
-            self.manager
-                .net
-                .send_to(&sync_buf, self.skt_src);
+            self.manager.net.send_to(&sync_buf, self.skt_src);
         }
     }
 
@@ -122,7 +113,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
         let schema_pkt =
             self.manager
                 .world
-                .schema_pkt(sid, reader, &mut writer);
+                .set_in_schema_pkt(sid, reader, &mut writer);
 
         Broadcast {
             addrs: self.manager.sess.addrs(),

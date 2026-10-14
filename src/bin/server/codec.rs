@@ -1,10 +1,8 @@
 use std::cell::Cell;
 
 use bitp::{
-    bits::{BitReader, BitWriter, DecodeType, PacketSchema},
-    pkt::{
-        PacketKind, {FIELD_LENGTHS, FieldName},
-    },
+    bits::{BitReader, BitWriter, PacketSchema},
+    pkt::{FIELD_LENGTHS, FieldName},
 };
 
 pub enum Rel {
@@ -48,46 +46,6 @@ impl Codec {
         id
     }
 
-    /// Returns the 3-byte `[PacketKind::Snapshot, tick_lo, tick_hi]` header
-    ///
-    /// @TODO: Move this function and anything related to packet heading into
-    ///        a scoped area e.g module or struct
-    pub fn snapshot_header_buf(&self, tick: u16) -> Vec<u8> {
-        let [lo, hi] = tick.to_le_bytes();
-        vec![PacketKind::Snapshot as u8, lo, hi]
-    }
-
-    /// Returns a 2-byte `[PacketType:: Data, decode_type]` header
-    pub fn header_buf(&self, decode_type: DecodeType) -> Vec<u8> {
-        vec![PacketKind::Data as u8, decode_type as u8]
-    }
-
-    /// For packing schema-only values with the
-    /// `[PacketKind::Data, DecodeType::Single]` header prepended.
-    pub fn headful_pack(&self, args: FieldsPack) -> Vec<u8> {
-        let mut buf = self.header_buf(DecodeType::Single);
-        buf.extend(self.headless_pack(args));
-        buf
-    }
-
-    /// For packing schema-only values.
-    ///
-    /// Calls internally [Codec::seed_pkt]
-    pub fn headless_pack(&self, args: FieldsPack) -> Vec<u8> {
-        let mut writer = self.writer();
-        self.seed_pkt(
-            &mut writer,
-            args.sid,
-            args.id.map_or(Rel::None, Rel::Id),
-        );
-
-        for (name, val) in args.fields {
-            writer.write(name, val)
-        }
-
-        writer.buf()
-    }
-
     pub fn pkt_ioids(
         &self,
         reader: &mut BitReader,
@@ -100,8 +58,8 @@ impl Codec {
     }
 
     /// Writes [FieldName::DevSessionId] by default and a written reliable
-    /// value of either [Rel::Seq] or [Rel::Id], or if [Rel::None] set, no
-    /// written value at all
+    /// value of either [Rel::Seq] or [Rel::Id], or no value written at all
+    /// if [Rel::None] is set
     pub fn seed_pkt(&self, writer: &mut BitWriter, sid: u32, rel: Rel) {
         writer.write(&FieldName::DevSessionId, &sid);
         match rel {
