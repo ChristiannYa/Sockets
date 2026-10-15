@@ -58,11 +58,14 @@ impl<'a> Step<'a> {
     }
 
     fn mv_ver_crouch(&mut self) {
-        if self.p.is_on_floor {
-            let dir = if self.sim_intent.held.crouch { -1.0 } else { 1.0 };
-            let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
-            self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
+        if !self.p.is_on_floor {
+            return;
         }
+
+        self.p.crouching = self.sim_intent.held.crouch;
+        let dir = if self.p.crouching { -1.0 } else { 1.0 };
+        let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
+        self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
     }
 
     fn integrate(&mut self) {

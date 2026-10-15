@@ -100,6 +100,10 @@ impl<'w> WorldPacker<'w> {
                             FieldName::Yaw,
                             qua::intent::YAW.encode(player.state.yaw),
                         ),
+                        (
+                            FieldName::IsCrouching,
+                            player.state.crouching as u32,
+                        ),
                     ],
                     sid: *sid,
                 })
