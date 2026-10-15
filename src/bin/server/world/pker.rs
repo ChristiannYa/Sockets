@@ -58,7 +58,7 @@ impl<'w> WorldPacker<'w> {
                     id: None,
                     fields: &[
                         (FieldName::LocationX, loc_qua.x.encode(x)),
-                        (FieldName::LocationY, loc_qua.x.encode(y)),
+                        (FieldName::LocationY, qua::intent::Y.encode(y)),
                         (FieldName::LocationZ, loc_qua.z.encode(z)),
                         (FieldName::ColorH, hsv_qua.h.encode(p.color.h)),
                         (FieldName::ColorS, hsv_qua.s.encode(p.color.s)),
