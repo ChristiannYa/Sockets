@@ -1,5 +1,6 @@
 mod recv;
 mod retry;
+mod sim;
 
 use std::net::SocketAddr;
 
@@ -37,14 +38,5 @@ impl<'c, 'w> Manager<'c, 'w> {
         recv::cli(self, buf, skt_src);
     }
 
-    pub fn sim_tick(&mut self) {
-        self.world.tick();
-        if let Some(pkt) = self.world.players_snapshot_pkt() {
-            self.net.broadcast(crate::net::Broadcast {
-                addrs: self.sess.addrs(),
-                skt_src: None,
-                buf: &pkt,
-            });
-        }
-    }
+    pub fn sim_tick(&mut self) { sim::tick(self); }
 }
