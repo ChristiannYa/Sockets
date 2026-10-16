@@ -1,6 +1,3 @@
-//! [PoseSample], [POSE_STRIDE], blending, and angle lerping.
-//! Adding a field starts here
-
 use std::f32::consts::TAU;
 
 /// Floats per pose (x, y, z, yaw, is_crouching).

@@ -1,5 +1,3 @@
-//! [PoseHistory]: The ring buffer and `at(t)` lerp
-
 use super::sample::PoseSample;
 use std::collections::VecDeque;
 
