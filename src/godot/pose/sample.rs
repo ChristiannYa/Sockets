@@ -13,7 +13,7 @@ pub struct PoseSample {
     pub y: f32,
     pub z: f32,
     pub yaw: f32,
-    pub crouch: bool,
+    pub is_crouching: bool,
 }
 
 impl PoseSample {
@@ -23,12 +23,11 @@ impl PoseSample {
             self.y,
             self.z,
             self.yaw,
-            if self.crouch { 1.0 } else { 0.0 },
+            if self.is_crouching { 1.0 } else { 0.0 },
         ]
     }
 
-    /// Slides from `older` to `newer`, `w` being the fraction of the way
-    /// (0..1)
+    /// Slide from `older` to `newer`, `w` being the fraction of the way (0..1)
     pub fn blend(older: Self, newer: Self, w: f32) -> Self {
         PoseSample {
             x: lerp(older.x, newer.x, w),
@@ -37,14 +36,14 @@ impl PoseSample {
             yaw: lerp_angle(older.yaw, newer.yaw, w),
             // A bool can't be blended, so hold the older value until the
             // newer sample's time arrives
-            crouch: older.crouch,
+            is_crouching: older.is_crouching,
         }
     }
 }
 
 fn lerp(from: f32, to: f32, w: f32) -> f32 { from + (to - from) * w }
 
-/// Takes the shortest way around the circle
+/// Take the shortest way around the circle
 fn lerp_angle(from: f32, to: f32, w: f32) -> f32 {
     let diff = (to - from) % TAU;
     let dist = (2.0 * diff) % TAU - diff;

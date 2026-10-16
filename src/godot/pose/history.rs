@@ -25,8 +25,8 @@ impl PoseHistory {
         self.samples.push_back((time_s, pose));
     }
 
-    /// Holds the nearest sample outside the stored range,
-    /// otherwise blends the two samples around it. `None` while empty.
+    /// Hold the nearest sample outside the stored range, otherwise blend the
+    /// two samples around it. `None` while empty.
     pub fn at(&self, at_t: f64) -> Option<PoseSample> {
         let &(oldest_t, oldest) = self.samples.front()?;
         let &(newest_t, newest) = self.samples.back()?;
@@ -59,7 +59,7 @@ mod tests {
     use super::*;
 
     fn pose(x: f32, crouch: bool) -> PoseSample {
-        PoseSample { x, y: 0.0, z: 0.0, yaw: 0.0, crouch }
+        PoseSample { x, y: 0.0, z: 0.0, yaw: 0.0, is_crouching: crouch }
     }
 
     fn history(items: &[(f64, PoseSample)]) -> PoseHistory {
@@ -92,11 +92,11 @@ mod tests {
 
         let p = h.at(1.5).unwrap();
         assert!((p.x - 15.0).abs() < 1e-4);
-        assert!(!p.crouch); // older value held
+        assert!(!p.is_crouching); // older value held
 
         let p = h.at(2.5).unwrap();
         assert!((p.x - 30.0).abs() < 1e-4);
-        assert!(p.crouch);
+        assert!(p.is_crouching);
     }
 
     #[test]
