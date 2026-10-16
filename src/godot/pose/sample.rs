@@ -3,7 +3,7 @@
 
 use std::f32::consts::TAU;
 
-/// Floats per pose in `UdpPoses.sample`: x, y, z, yaw, is_crouching.
+/// Floats per pose (x, y, z, yaw, is_crouching).
 /// Extends together with [PoseSample] and `to_array`.
 pub const POSE_STRIDE: usize = 5;
 
@@ -27,7 +27,8 @@ impl PoseSample {
         ]
     }
 
-    /// Slides from `older` to `newer`, `w` being the fraction of the way (0..1)
+    /// Slides from `older` to `newer`, `w` being the fraction of the way
+    /// (0..1)
     pub fn blend(older: Self, newer: Self, w: f32) -> Self {
         PoseSample {
             x: lerp(older.x, newer.x, w),
