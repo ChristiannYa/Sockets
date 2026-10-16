@@ -11,7 +11,6 @@ use crate::{
         player::{Player, Players},
     },
 };
-use bitp::bits::{BitReader, BitWriter};
 use std::net::SocketAddr;
 
 /// Who to send to and where to track it
@@ -23,19 +22,13 @@ pub struct RelTarget<'r> {
 
 pub struct World<'w> {
     tick_ct: u16,
-    pker: WorldPacker<'w>,
     codec: &'w Codec,
     players: Players,
 }
 
 impl<'w> World<'w> {
     pub fn new(codec: &'w Codec) -> Self {
-        World {
-            pker: WorldPacker::new(codec),
-            codec,
-            players: Players::default(),
-            tick_ct: 0,
-        }
+        World { codec, players: Players::default(), tick_ct: 0 }
     }
 
     /// Advances the simulation by 1 tick
@@ -43,6 +36,8 @@ impl<'w> World<'w> {
         self.tick_ct = self.tick_ct.wrapping_add(1);
         self.players.sim_tick();
     }
+
+    pub fn tick_ct(&self) -> u16 { self.tick_ct }
 
     pub fn player_mut_ref(&mut self, sid: u32) -> Option<&mut Player> {
         self.players.by_sid_mut_ref(sid)
@@ -56,32 +51,10 @@ impl<'w> World<'w> {
     ) -> (Vec<u8>, u8) {
         let (player, fields) = Player::spawn(self.codec.schema());
         self.players.insert_new(player, rel_target.sid);
-        self.pker.rel_pkting(&fields, rel_target)
+        self.pker().rel_pkting(&fields, rel_target)
     }
 
-    // --------------
-    // Paker relays
-    // --------------
-
-    pub fn welcome_pkt(&self, rel_target: &mut RelTarget) -> Vec<u8> {
-        self.pker.welcome_pkt(rel_target)
-    }
-
-    pub fn sync_pkt(&self, sid: u32) -> Option<Vec<u8>> {
-        self.pker.sync_pkt(sid, &self.players)
-    }
-
-    pub fn players_snapshot_pkt(&self) -> Option<Vec<u8>> {
-        self.pker
-            .players_snapshot_pkt(self.tick_ct, &self.players)
-    }
-
-    pub fn set_in_schema_pkt(
-        &mut self,
-        sid: u32,
-        reader: &mut BitReader,
-        writer: &mut BitWriter,
-    ) -> Vec<u8> {
-        self.pker.set_in_schema_pkt(sid, reader, writer)
+    pub fn pker(&self) -> WorldPacker<'_> {
+        WorldPacker::new(self.codec, &self.players)
     }
 }

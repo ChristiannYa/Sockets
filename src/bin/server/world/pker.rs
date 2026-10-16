@@ -14,10 +14,13 @@ use tap::Pipe;
 
 pub struct WorldPacker<'w> {
     codec: &'w Codec,
+    players: &'w Players,
 }
 
 impl<'w> WorldPacker<'w> {
-    pub fn new(codec: &'w Codec) -> Self { WorldPacker { codec } }
+    pub fn new(codec: &'w Codec, players: &'w Players) -> Self {
+        WorldPacker { codec, players }
+    }
 
     /// Returns a reliable packet with the [FieldName::DevIsNewPlayer] flag
     /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
@@ -44,11 +47,12 @@ impl<'w> WorldPacker<'w> {
     /// // [2, 1, 2, 3, 1, 2, 3]
     /// return [record_count, record1, record2].concat()
     /// ```
-    pub fn sync_pkt(&self, sid: u32, players: &Players) -> Option<Vec<u8>> {
+    pub fn sync_pkt(&self, sid: u32) -> Option<Vec<u8>> {
         let loc_qua = qua::loc(self.codec.schema());
         let hsv_qua = qua::hsv(self.codec.schema());
 
-        let records: Vec<Vec<u8>> = players
+        let records: Vec<Vec<u8>> = self
+            .players
             .iter()
             .filter(|(sid_iter, _)| **sid_iter != sid)
             .map(|(sid, p)| {
@@ -79,14 +83,11 @@ impl<'w> WorldPacker<'w> {
         }
     }
 
-    pub fn players_snapshot_pkt(
-        &self,
-        tick_ct: u16,
-        players: &Players,
-    ) -> Option<Vec<u8>> {
+    pub fn players_snapshot_pkt(&self, tick_ct: u16) -> Option<Vec<u8>> {
         let loc_qua = qua::loc(self.codec.schema());
 
-        let records: Vec<Vec<u8>> = players
+        let records: Vec<Vec<u8>> = self
+            .players
             .iter()
             .map(|(sid, player)| {
                 let [x, y, z] = player.state.pos;

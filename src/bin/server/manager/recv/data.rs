@@ -54,6 +54,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
 
         self.manager
             .world
+            .pker()
             .welcome_pkt(&mut rel_targ)
             .tap(|pkt| self.manager.net.send_to(pkt, self.skt_src));
 
@@ -70,7 +71,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             self.manager.pending_pkts,
         );
 
-        if let Some(sync_buf) = self.manager.world.sync_pkt(sid) {
+        if let Some(sync_buf) = self.manager.world.pker().sync_pkt(sid) {
             self.manager.net.send_to(&sync_buf, self.skt_src);
         }
     }
@@ -110,10 +111,11 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             ),
         );
 
-        let schema_pkt =
-            self.manager
-                .world
-                .set_in_schema_pkt(sid, reader, &mut writer);
+        let schema_pkt = self.manager.world.pker().set_in_schema_pkt(
+            sid,
+            reader,
+            &mut writer,
+        );
 
         Broadcast {
             addrs: self.manager.sess.addrs(),
