@@ -41,10 +41,10 @@ impl PoseHistory {
         self.samples.push_back((time_s, pose));
     }
 
-    /// Pose at `at_t_s`, or [None] while the history is empty.
+    /// Pose at `t_s`, or [`None`] while the history is empty.
     ///
-    /// If `at_t_s` falls between 2 stored samples the pose is blended in
-    /// proportion to how far `at_t_s` is between them.
+    /// If `t_s` falls between two stored samples the pose is blended in
+    /// proportion to how far `t_s` is between them.
     /// Before the oldest or after the newest sample there is nothing to blend
     /// with, so that sample's pose is returned as is (no extrapolation).
     ///
@@ -54,27 +54,42 @@ impl PoseHistory {
     /// at(1.5) -> x=15 (halfway between the two)
     /// at(5.0) -> x=20 (after the newest: newest sample)
     /// ```
-    pub fn at(&self, at_t_s: f64) -> Option<PoseSample> {
-        let &(oldest_t, oldest) = self.samples.front()?;
-        let &(newest_t, newest) = self.samples.back()?;
+    pub fn at(&self, t_s: f64) -> Option<PoseSample> {
+        let &(f_t, f_p) = self.samples.front()?;
+        let &(b_t, b_p) = self.samples.back()?;
 
-        if at_t_s <= oldest_t {
-            return Some(oldest);
+        if t_s <= f_t {
+            return Some(f_p); // clamp: no extrapolation
         }
-        if at_t_s >= newest_t {
-            return Some(newest);
+        if t_s >= b_t {
+            return Some(b_p);
         }
 
-        // First index with time >= at_t_s. It is >= 1 since at_t_s > oldest_t
-        let i = self.samples.partition_point(|(t, _)| *t < at_t_s);
-        let (older_t, older) = self.samples[i - 1];
-        let (newer_t, newer) = self.samples[i];
+        // Find the pair of samples that bracket t_s, so that
+        // lo_t < t_s <= hi_t.
+        //
+        // hi_i is the index of the first sample at or after t_s (the
+        // partition point), and lo_i = hi_i - 1 is the sample before it.
+        // Both are valid because the early returns above guarantee
+        // f_t < t_s < b_t, so hi_i is neither 0 nor past the end.
+        //
+        // Ex:
+        // times = [1.0, 2.0, 3.0]
+        // t_s   = 2.5
+        // hi_i  = 2 -> (lo = (2.0, _), hi = (3.0, _))
+        //
+        // times = [1.0, 2.0, 3.0, 5.0, 8.0]
+        // t_s   = 5.0
+        // hi_i  = 3 -> (lo = (3.0, _), hi = (5.0, _))
+        let hi_i = self.samples.partition_point(|(t, _)| *t < t_s);
+        let (hi_t, hi_p) = self.samples[hi_i];
+        let (lo_t, lo_p) = self.samples[hi_i - 1];
 
-        // newer_t > older_t is guaranteed since `push` only accepts
-        // increasing times
-        let w = ((at_t_s - older_t) / (newer_t - older_t)) as f32;
+        // hi_t > lo_t is guaranteed since `push` only accepts
+        // strictly increasing times, so the division below is safe.
+        let w = ((t_s - lo_t) / (hi_t - lo_t)) as f32;
 
-        Some(PoseSample::blend(older, newer, w))
+        Some(PoseSample::blend(lo_p, hi_p, w))
     }
 }
 
