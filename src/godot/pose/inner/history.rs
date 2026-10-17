@@ -25,28 +25,25 @@ impl PoseHistory {
 
     /// Hold the nearest sample outside the stored range, otherwise blend the
     /// two samples around it. `None` while empty.
-    pub fn at(&self, at_t: f64) -> Option<PoseSample> {
+    pub fn at(&self, at_t_s: f64) -> Option<PoseSample> {
         let &(oldest_t, oldest) = self.samples.front()?;
         let &(newest_t, newest) = self.samples.back()?;
 
-        if at_t <= oldest_t {
+        if at_t_s <= oldest_t {
             return Some(oldest);
         }
-        if at_t >= newest_t {
+        if at_t_s >= newest_t {
             return Some(newest);
         }
 
-        // First index with time >= at_t. It is >= 1 since at_t > oldest_t
-        let i = self.samples.partition_point(|(t, _)| *t < at_t);
+        // First index with time >= at_t_s. It is >= 1 since at_t_s > oldest_t
+        let i = self.samples.partition_point(|(t, _)| *t < at_t_s);
         let (older_t, older) = self.samples[i - 1];
         let (newer_t, newer) = self.samples[i];
 
-        let elapsed = newer_t - older_t;
-        let w = if elapsed > 0.0 {
-            ((at_t - older_t) / elapsed) as f32
-        } else {
-            1.0
-        };
+        // newer_t > older_t is guaranteed since `push` only accepts
+        // increasing times
+        let w = ((at_t_s - older_t) / (newer_t - older_t)) as f32;
 
         Some(PoseSample::blend(older, newer, w))
     }
