@@ -91,6 +91,11 @@ impl PoseHistory {
 
         Some(PoseSample::blend(lo_p, hi_p, w))
     }
+
+    /// Newest stored sample, or [`None`] while empty.
+    pub fn latest(&self) -> Option<PoseSample> {
+        self.samples.back().map(|&(_, p)| p)
+    }
 }
 
 #[cfg(test)]
@@ -145,5 +150,13 @@ mod tests {
         h.push(2.0, pose(2.0, false));
         h.push(3.0, pose(3.0, false));
         assert_eq!(h.at(0.0).unwrap().x, 2.0);
+    }
+
+    #[test]
+    fn latest_is_newest_sample() {
+        assert!(PoseHistory::new(4).latest().is_none());
+
+        let h = history(&[(1.0, pose(10.0, false)), (2.0, pose(20.0, true))]);
+        assert_eq!(h.latest().unwrap().x, 20.0);
     }
 }

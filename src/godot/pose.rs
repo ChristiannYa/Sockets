@@ -16,7 +16,7 @@ mod tracker;
 use godot::prelude::{
     Gd, GodotClass, PackedByteArray, PackedFloat32Array, godot_api,
 };
-use sample::POSE_STRIDE;
+use sample::{POSE_STRIDE, PoseSample};
 use tracker::PoseTracker;
 
 use crate::{bits::PacketSchema, pkt::FIELD_LENGTHS};
@@ -49,14 +49,22 @@ impl UdpPoses {
         }
     }
 
-    /// `[x, y, z, yaw, ...]`, or empty when there is no data yet
     #[func]
     fn sample(&self, sid: i64, at_t_s: f64) -> PackedFloat32Array {
-        u32::try_from(sid)
-            .ok()
-            .and_then(|sid| self.tracker.sample(sid, at_t_s))
-            .map(|pose| PackedFloat32Array::from(&pose.to_array()[..]))
-            .unwrap_or_default()
+        pose_to_array(
+            u32::try_from(sid)
+                .ok()
+                .and_then(|sid| self.tracker.sample(sid, at_t_s)),
+        )
+    }
+
+    #[func]
+    fn latest(&self, sid: i64) -> PackedFloat32Array {
+        pose_to_array(
+            u32::try_from(sid)
+                .ok()
+                .and_then(|sid| self.tracker.latest(sid)),
+        )
     }
 
     #[func]
@@ -65,4 +73,9 @@ impl UdpPoses {
             self.tracker.forget(sid);
         }
     }
+}
+
+fn pose_to_array(pose: Option<PoseSample>) -> PackedFloat32Array {
+    pose.map(|p| PackedFloat32Array::from(&p.to_array()[..]))
+        .unwrap_or_default()
 }

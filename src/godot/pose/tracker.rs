@@ -78,5 +78,9 @@ impl PoseTracker {
         self.tracks.get(&sid)?.history.at(at_t_s)
     }
 
+    pub fn latest(&self, sid: u32) -> Option<PoseSample> {
+        self.tracks.get(&sid)?.history.latest()
+    }
+
     pub fn forget(&mut self, sid: u32) { self.tracks.remove(&sid); }
 }
