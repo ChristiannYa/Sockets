@@ -1,4 +1,4 @@
-use super::sample::PoseSample;
+use super::PoseSample;
 use std::collections::VecDeque;
 
 /// Time-ordered pose samples of one player, oldest first

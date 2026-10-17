@@ -1,4 +1,3 @@
-mod history;
 mod raw;
 mod sample;
 mod tracker;

@@ -1,7 +1,9 @@
+mod history;
 mod records;
 
-use super::{history::PoseHistory, raw::RawPose, sample::PoseSample};
+use super::{raw::RawPose, sample::PoseSample};
 use crate::bits::PacketSchema;
+use history::PoseHistory;
 use records::records;
 use std::collections::HashMap;
 
