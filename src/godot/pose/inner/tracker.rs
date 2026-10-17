@@ -1,7 +1,8 @@
-use super::{
-    history::PoseHistory, raw::RawPose, records::records, sample::PoseSample,
-};
+mod records;
+
+use super::{history::PoseHistory, raw::RawPose, sample::PoseSample};
 use crate::bits::PacketSchema;
+use records::records;
 use std::collections::HashMap;
 
 struct Track {
@@ -24,7 +25,7 @@ impl PoseTracker {
 
     /// Reads every record in `body` and updates each player's pose history.
     ///
-    /// `body` is a records buffer (layout in [`records`]).
+    /// `body` is a records buffer (layout in [`records::records`]).
     /// `recv_t_s` is the time of the poses decoded from it. [`Self::sample`]
     /// looks poses up on that same clock.
     ///
