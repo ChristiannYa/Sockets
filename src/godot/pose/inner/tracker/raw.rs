@@ -1,4 +1,4 @@
-use super::sample::PoseSample;
+use super::PoseSample;
 use crate::{
     bits::{BitReader, PacketSchema},
     pkt::FieldName,
