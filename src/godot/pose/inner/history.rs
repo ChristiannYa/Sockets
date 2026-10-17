@@ -41,8 +41,19 @@ impl PoseHistory {
         self.samples.push_back((time_s, pose));
     }
 
-    /// Hold the nearest sample outside the stored range, otherwise blend the
-    /// two samples around it. `None` while empty.
+    /// Pose at `at_t_s`, or [None] while the history is empty.
+    ///
+    /// If `at_t_s` falls between 2 stored samples the pose is blended in
+    /// proportion to how far `at_t_s` is between them.
+    /// Before the oldest or after the newest sample there is nothing to blend
+    /// with, so that sample's pose is returned as is (no extrapolation).
+    ///
+    /// ```text
+    /// samples: t=1.0 x=10, t=2.0 x=20
+    /// at(0.0) -> x=10 (before the oldest: oldest sample)
+    /// at(1.5) -> x=15 (halfway between the two)
+    /// at(5.0) -> x=20 (after the newest: newest sample)
+    /// ```
     pub fn at(&self, at_t_s: f64) -> Option<PoseSample> {
         let &(oldest_t, oldest) = self.samples.front()?;
         let &(newest_t, newest) = self.samples.back()?;
