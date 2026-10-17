@@ -12,7 +12,25 @@ impl PoseHistory {
         PoseHistory { cap, samples: VecDeque::new() }
     }
 
+    /// Adds a sample taken at `time_s`.
+    ///
+    /// Times must strictly increase: a sample that is not newer than the
+    /// newest stored one (stale or duplicate) is ignored.
+    ///
+    /// When full, the oldest sample is dropped to make room.
+    ///
+    /// ```text
+    /// stored times: 1.0, 2.0
+    /// push 3.0 -> stored: 1.0, 2.0, 3.0
+    /// push 2.5 -> ignored: (older than 3.0)
+    /// push 3.0 -> ignored: (same time as 3.0)
+    /// ```
     pub fn push(&mut self, time_s: f64, pose: PoseSample) {
+        // self.samples.back() id newest stored sample and returns None while
+        // the history is empty.
+        //
+        // is_some_and(...) is `true` when a newest sample exists and the
+        // time_s is not strictly later than t
         if self.samples.back().is_some_and(|(t, _)| time_s <= *t) {
             return; // stale or suplicate
         }
