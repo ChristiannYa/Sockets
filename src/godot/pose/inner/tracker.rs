@@ -22,8 +22,32 @@ impl PoseTracker {
         PoseTracker { schema, history_cap, tracks: HashMap::new() }
     }
 
-    /// `body`'s the records buffer (`[record_count, (len, bytes)*]`) received
-    /// at `recv_t_s`
+    /// Reads every record in `body` and updates each player's pose history.
+    ///
+    /// `body` is a records buffer (layout in [`records`]).
+    /// `recv_t_s` is the time of the poses decoded from it. [`Self::sample`]
+    /// looks poses up on that same clock.
+    ///
+    /// For each record:
+    /// 1. The pose fields it carries are merged into that player's last-known
+    ///    fields, so a partial record only updates what it carries;
+    /// 2. Once every pose field is known, the pose is decoded and added to the
+    ///    player's history.
+    ///
+    /// Malformed records and records without a session id are skipped. A
+    /// player has no history until every pose field has been received at least
+    /// once.
+    ///
+    /// ```text
+    /// sid=3 x=10 y=0 z=5 yaw=1 crouch=0  -> all known:
+    ///                                         pose pushed
+    ///
+    /// sid=3 x=12                         -> merged (x=12, rest kept):
+    ///                                         pose pushed
+    ///
+    /// sid=7 x=4                          -> y, z, yaw, crouch unknown:
+    ///                                         nothing pushed
+    /// ```
     pub fn ingest(&mut self, body: &[u8], recv_t_s: f64) {
         let history_cap = self.history_cap;
 
