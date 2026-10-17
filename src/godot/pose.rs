@@ -1,9 +1,11 @@
-mod inner;
+mod sample;
+mod tracker;
 
 use godot::prelude::{
     Gd, GodotClass, PackedByteArray, PackedFloat32Array, godot_api,
 };
-use inner::{POSE_STRIDE, PoseTracker};
+use sample::POSE_STRIDE;
+use tracker::PoseTracker;
 
 use crate::{bits::PacketSchema, pkt::FIELD_LENGTHS};
 
