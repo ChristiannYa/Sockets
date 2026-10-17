@@ -1,3 +1,15 @@
+//! Smooth movement of remote players.
+//!
+//! The server sends every player's pose in snapshots 60 times a second.
+//! Drawing each pose as it arrives would look jittery, so poses are kept with
+//! their time and the game asks for the pose at a moment slightly in the past,
+//! blended between the two snapshots around that moment.
+//!
+//! Every call across the Godot–Rust boundary (FFI) has a cost, so the work is
+//! batched: one call per packet (`ingest`) and one call per player per frame
+//! (`sample`). Reading records, merging partial ones, decoding and keeping the
+//! history all stay in Rust, between those two calls.
+
 mod sample;
 mod tracker;
 
