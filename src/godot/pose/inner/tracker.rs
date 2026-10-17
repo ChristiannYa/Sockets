@@ -37,8 +37,8 @@ impl PoseTracker {
                 raw: RawPose::default(),
                 history: PoseHistory::new(history_cap),
             });
-
             track.raw.merge(&new);
+
             if let Some(pose) = track.raw.decode(&self.schema) {
                 track.history.push(recv_t_s, pose);
             }

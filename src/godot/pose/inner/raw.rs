@@ -6,8 +6,6 @@ use crate::{
 };
 
 /// Raw (still wire-encoded) pose fields of one player.
-/// Records are deltas, an unset field means "unchanged", so these are merged
-/// until all are known.
 #[derive(Default)]
 pub struct RawPose {
     x: Option<u32>,
@@ -54,7 +52,15 @@ impl RawPose {
         Some((sid?, raw))
     }
 
-    /// Overwrite fields that `new` carries, keeps the rest
+    /// Overwrite with fields that `new` carries.
+    /// `new`'s [Some] values replace what is stored and its [None] values are
+    /// ignored (update only what's present).
+    ///
+    /// ```text
+    /// stored: x=10, y=10, z=5
+    /// new:    x=12, y=None, z=None
+    /// result: x=12, y=10, z=5
+    /// ```
     pub fn merge(&mut self, new: &RawPose) {
         self.x = new.x.or(self.x);
         self.y = new.y.or(self.y);
@@ -65,16 +71,13 @@ impl RawPose {
 
     /// `None` until every pose field has been received at least once
     pub fn decode(&self, schema: &PacketSchema) -> Option<PoseSample> {
-        let (lx, ly, lz) = (self.x?, self.y?, self.z?);
-        let (yaw, crouch) = (self.yaw?, self.is_crouching?);
-
         let loc = qua::loc(schema);
         Some(PoseSample {
-            x: loc.x.decode(lx),
-            y: qua::intent::Y.decode(ly),
-            z: loc.z.decode(lz),
-            yaw: qua::intent::YAW.decode(yaw),
-            is_crouching: crouch == 1,
+            x: loc.x.decode(self.x?),
+            y: qua::intent::Y.decode(self.y?),
+            z: loc.z.decode(self.z?),
+            yaw: qua::intent::YAW.decode(self.yaw?),
+            is_crouching: self.is_crouching? == 1,
         })
     }
 }
