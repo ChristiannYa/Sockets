@@ -19,7 +19,8 @@ use records::records;
 use std::collections::HashMap;
 
 use godot::prelude::{
-    GodotClass, PackedByteArray, PackedFloat32Array, godot_api,
+    GodotClass, PackedByteArray, PackedFloat32Array, PackedInt32Array,
+    godot_api,
 };
 
 /// `[PacketKind::Snapshot, tick_lo, tick_hi]`, followed by the records
@@ -56,6 +57,14 @@ impl PlayerStates {
 
     pub fn new(schema: PacketSchema, history_cap: usize) -> Self {
         PlayerStates { schema, history_cap, players: HashMap::new() }
+    }
+
+    /// Session ids of every player seen so far
+    #[func]
+    pub fn sids(&self) -> PackedInt32Array {
+        let sids: Vec<i32> =
+            self.players.keys().map(|&sid| sid as i32).collect();
+        PackedInt32Array::from(sids.as_slice())
     }
 
     /// Reads a snapshot packet and updates each player's state.
