@@ -1,6 +1,6 @@
 mod codec;
-mod pose;
 mod rel;
+mod state;
 
 use godot::prelude::{ExtensionLibrary, gdextension};
 
