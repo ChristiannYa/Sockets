@@ -1,7 +1,7 @@
 use crate::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     intent,
-    pkt::{FIELD_LENGTHS, PacketKind},
+    pkt::{FIELD_LENGTHS, FieldName, PacketKind},
     sim::{PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld},
 };
 use godot::{
@@ -39,39 +39,33 @@ impl UdpCodec {
         Gd::from_init_fn(|_| Self { schema })
     }
 
+    /// Only the `Dev*` fields of a single Data packet's record
     #[func]
-    fn decode(&self, buf: PackedByteArray) -> VarDictionary {
+    fn decode_dev(&self, buf: PackedByteArray) -> VarDictionary {
         // Strip [PacketType, DecodeType] — caller has already branched on
         // these to know this is a Data/Single packet before calling decode.
         let Some(body) = buf.as_slice().get(2..) else {
             return VarDictionary::new(); // too short to even hold the header
         };
 
-        let mut reader = BitReader::new(&self.schema, body);
-        let mut dict = VarDictionary::new();
-
-        for (field_name, _) in self.schema.fields.iter() {
-            if reader.isset(field_name) {
-                dict.set(format!("{field_name:?}"), reader.read(field_name));
-            }
-        }
-
-        dict
+        self.dev_fields(body)
     }
 
+    /// Only the `Dev*` fields of a single Data packet's record
     #[func]
-    fn decode_batch(&self, buf: PackedByteArray) -> VarArray {
+    fn decode_dev_batch(&self, buf: PackedByteArray) -> VarArray {
         // Strip [PacketType, DecodeType] before the record-count byte
         let Some(bytes) = buf.as_slice().get(2..) else {
             return VarArray::new();
         };
-        self.decode_records(bytes)
+        self.decode_dev_records(bytes)
     }
 
-    /// Returns `{ "tick": int, "records": Array }`, or an empty dictionary
-    /// when the packet is too short to hold the header
+    /// Returns `{ "tick": int, "records": Array }`, with each record holding
+    /// only its `Dev*` fields. Empty when the packet is too short to hold
+    /// the heade
     #[func]
-    fn decode_snapshot(&self, buf: PackedByteArray) -> VarDictionary {
+    fn decode_dev_snapshot(&self, buf: PackedByteArray) -> VarDictionary {
         let mut out = VarDictionary::new();
 
         // [PacketKind::Snapshot, tick_lo, tick_hi] + records buf
@@ -85,7 +79,7 @@ impl UdpCodec {
         out.set("tick".to_string(), u16::from_le_bytes([lo, hi]) as u32);
         out.set(
             "records".to_string(),
-            &self.decode_records(records).to_variant(),
+            &self.decode_dev_records(records).to_variant(),
         );
         out
     }
@@ -125,11 +119,10 @@ impl UdpCodec {
 
 impl UdpCodec {
     // @TODO
-    // Snapshot records are parsed here and again in
-    // `PlayerStates::ingest_ss`.
-    // Remove this once the remaining fields (color, health, ...) move to
-    // to Rust.
-    fn decode_records(&self, bytes: &[u8]) -> VarArray {
+    // Only the `Dev*` fields are kept, for the script-side handler (sequence,
+    // acks, new-player flag). Remove this and `decode`/`decode_snapshot`
+    // together with that logic once it moves to Rust.
+    fn decode_dev_records(&self, bytes: &[u8]) -> VarArray {
         let mut buf_out = VarArray::new();
 
         let Some((&record_count, mut records)) = bytes.split_first() else {
@@ -148,19 +141,36 @@ impl UdpCodec {
             let (buf, rem) = rem.split_at(record_len);
             records = rem;
 
-            let mut reader = BitReader::new(&self.schema, buf);
-            let mut dict = VarDictionary::new();
-            for (field_name, _) in self.schema.fields.iter() {
-                if reader.isset(field_name) {
-                    dict.set(
-                        format!("{field_name:?}"),
-                        reader.read(field_name),
-                    );
-                }
-            }
-            buf_out.push(&dict.to_variant());
+            buf_out.push(&self.dev_fields(buf).to_variant());
         }
 
         buf_out
+    }
+
+    fn dev_fields(&self, record: &[u8]) -> VarDictionary {
+        let mut reader = BitReader::new(&self.schema, record);
+        let mut dict = VarDictionary::new();
+
+        for (field_name, _) in self.schema.fields.iter() {
+            if !reader.isset(field_name) {
+                continue;
+            }
+
+            // Read every set field, even the ones skipped below, to keep the
+            // reader's bit cursor in sync
+            let val = reader.read(field_name);
+            let is_dev = matches!(
+                field_name,
+                FieldName::DevSessionId
+                    | FieldName::DevSequence
+                    | FieldName::DevPing
+                    | FieldName::DevPacketId
+                    | FieldName::DevIsNewPlayer
+            );
+            if is_dev {
+                dict.set(format!("{field_name:?}"), val);
+            }
+        }
+        dict
     }
 }
