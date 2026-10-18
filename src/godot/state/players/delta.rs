@@ -1,12 +1,14 @@
-use super::pose::RawPose;
+use super::{color::RawColor, pose::RawPose};
 use crate::{
     bits::{BitReader, PacketSchema},
     pkt::FieldName,
 };
 
 /// What records carry
+#[derive(Default)]
 pub struct PlayerDelta {
     pub pose: RawPose,
+    pub color: RawColor,
 }
 
 impl PlayerDelta {
@@ -22,7 +24,7 @@ impl PlayerDelta {
         // bit cursor in sync, even the ones no group wants
         let mut reader = BitReader::new(schema, record);
         let mut sid = None;
-        let mut delta = PlayerDelta { pose: RawPose::default() };
+        let mut delta = PlayerDelta::default();
 
         for (name, _) in schema.fields.iter() {
             if !reader.isset(name) {
@@ -31,7 +33,10 @@ impl PlayerDelta {
             let val = reader.read(name);
             match name {
                 FieldName::DevSessionId => sid = Some(val),
-                _ => delta.pose.set(name, val),
+                _ => {
+                    delta.pose.set(name, val);
+                    delta.color.set(name, val)
+                }
             }
         }
 

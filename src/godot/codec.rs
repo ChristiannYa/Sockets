@@ -150,7 +150,7 @@ impl UdpCodec {
 impl UdpCodec {
     // @TODO
     // Snapshot records are parsed here and again in
-    // `pose::PoseTracker::ingest`.
+    // `PlayerStates::ingest_ss`.
     // Remove this once the remaining fields (color, health, ...) move to
     // to Rust.
     fn decode_records(&self, bytes: &[u8]) -> VarArray {

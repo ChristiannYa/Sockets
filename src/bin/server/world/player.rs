@@ -1,12 +1,14 @@
 mod edges;
 mod intent_queue;
 
-use crate::world::{
-    self,
-    player::intent_queue::PlayerIntentQueue,
+use crate::world::{self, player::intent_queue::PlayerIntentQueue};
+use bitp::{
+    bits::PacketSchema,
+    pkt::FieldName,
+    qua,
+    sim::PlayerState,
     util::{Hsv, rand_disk_pt_xz},
 };
-use bitp::{bits::PacketSchema, pkt::FieldName, qua, sim::PlayerState};
 use std::collections::HashMap;
 
 pub type PlayersHM = HashMap<u32, Player>;

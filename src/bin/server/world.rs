@@ -1,7 +1,6 @@
 mod pker;
 pub mod player;
 mod sim;
-mod util;
 
 use crate::{
     codec::Codec,

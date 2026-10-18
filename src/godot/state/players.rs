@@ -5,11 +5,13 @@
 //! frame (`sample`). Reading records, merging partial ones, decoding and
 //! keeping the history all stay in Rust, between those two calls.
 
+mod color;
 mod delta;
 mod pose;
 mod records;
 
-use crate::bits::PacketSchema;
+use crate::bits::{DecodeType, PacketSchema};
+use color::RawColor;
 use delta::PlayerDelta;
 use pose::PoseTrack;
 pub use pose::{POSE_STRIDE, PoseSample};
@@ -26,6 +28,16 @@ const SNAPSHOT_HEADER_LEN: usize = 3;
 /// Everything known about one player. Color joins `pose` here later.
 struct PlayerState {
     pose: PoseTrack,
+    color: RawColor,
+}
+
+impl PlayerState {
+    fn new(history_cap: usize) -> Self {
+        PlayerState {
+            pose: PoseTrack::new(history_cap),
+            color: RawColor::default(),
+        }
+    }
 }
 
 /// State of every player, by session id
@@ -67,10 +79,39 @@ impl PlayerStates {
                     continue;
                 };
 
-                let player = self.players.entry(sid).or_insert_with(|| {
-                    PlayerState { pose: PoseTrack::new(history_cap) }
-                });
+                let player = self
+                    .players
+                    .entry(sid)
+                    .or_insert_with(|| PlayerState::new(history_cap));
+
                 player.pose.apply(&delta.pose, &self.schema, recv_t_s);
+                player.color.merge(&delta.color);
+            }
+        }
+    }
+
+    /// Reads a Data packet and updates the color of the players it carries.
+    ///
+    /// `buf` is `[PacketKind::Data, DecodeType]` followed by one record
+    /// (single) or a records buffer (batch, layout in [`records::records`]).
+    ///
+    /// Only color is taken from these records. Their poses have no snapshot
+    /// time, so only snapshots feed the pose history.
+    ///
+    /// Malformed records and records without a session id are skipped.
+    #[func]
+    pub fn ingest_data(&mut self, buf: PackedByteArray) {
+        let bytes = buf.as_slice();
+        let (Some(&decode_type), Some(body)) = (bytes.get(1), bytes.get(2..))
+        else {
+            return;
+        };
+
+        if decode_type == DecodeType::Single as u8 {
+            self.merge_color(body);
+        } else if decode_type == DecodeType::Batch as u8 {
+            for record in records(body) {
+                self.merge_color(record);
             }
         }
     }
@@ -93,6 +134,19 @@ impl PlayerStates {
         )
     }
 
+    /// `[h, s, v]` of the player, or an empty array until every color field
+    /// has been received
+    #[func]
+    fn color(&self, sid: i64) -> PackedFloat32Array {
+        u32::try_from(sid)
+            .ok()
+            .and_then(|sid| {
+                self.players.get(&sid)?.color.decode(&self.schema)
+            })
+            .map(|c| PackedFloat32Array::from(&[c.h, c.s, c.v][..]))
+            .unwrap_or_default()
+    }
+
     #[func]
     pub fn forget(&mut self, sid: i64) {
         if let Ok(sid) = u32::try_from(sid) {
@@ -104,4 +158,19 @@ impl PlayerStates {
 fn pose_to_array(pose: Option<PoseSample>) -> PackedFloat32Array {
     pose.map(|p| PackedFloat32Array::from(&p.to_array()[..]))
         .unwrap_or_default()
+}
+
+impl PlayerStates {
+    fn merge_color(&mut self, record: &[u8]) {
+        let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
+        else {
+            return;
+        };
+        let history_cap = self.history_cap;
+        let player = self
+            .players
+            .entry(sid)
+            .or_insert_with(|| PlayerState::new(history_cap));
+        player.color.merge(&delta.color);
+    }
 }
