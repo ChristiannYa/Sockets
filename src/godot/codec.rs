@@ -2,14 +2,12 @@ use crate::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     intent,
     pkt::{FIELD_LENGTHS, PacketKind},
-    qua,
     sim::{PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld},
 };
 use godot::{
     meta::ToGodot,
     prelude::{
-        Color, Gd, GodotClass, PackedByteArray, VarArray, VarDictionary,
-        Vector3, godot_api,
+        Gd, GodotClass, PackedByteArray, VarArray, VarDictionary, godot_api,
     },
 };
 
@@ -90,28 +88,6 @@ impl UdpCodec {
             &self.decode_records(records).to_variant(),
         );
         out
-    }
-
-    #[func]
-    fn decode_loc(&self, x: u32, z: u32) -> Vector3 {
-        let codec = qua::loc(&self.schema);
-        Vector3::new(codec.x.decode(x), 0.0, codec.z.decode(z))
-    }
-
-    #[func]
-    fn decode_y(&self, y: u32) -> f32 { qua::intent::Y.decode(y) }
-
-    #[func]
-    fn decode_yaw(&self, yaw: u32) -> f32 { qua::intent::YAW.decode(yaw) }
-
-    #[func]
-    fn decode_hsv(&self, h: u32, s: u32, v: u32) -> Color {
-        let codec = qua::hsv(&self.schema);
-        Color::from_hsv(
-            codec.h.decode(h) as f64,
-            codec.s.decode(s) as f64,
-            codec.v.decode(v) as f64,
-        )
     }
 
     #[func]
