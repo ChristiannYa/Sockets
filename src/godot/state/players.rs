@@ -26,9 +26,6 @@ use godot::prelude::{
     godot_api,
 };
 
-/// `[PacketKind::Snapshot, tick_lo, tick_hi]`, followed by the records
-const SNAPSHOT_HEADER_LEN: usize = 3;
-
 /// Everything known about one player. Color joins `pose` here later.
 struct PlayerState {
     pose: PoseTrack,
@@ -101,38 +98,6 @@ impl PlayerStates {
         let sids: Vec<i32> =
             self.players.keys().map(|&sid| sid as i32).collect();
         PackedInt32Array::from(sids.as_slice())
-    }
-
-    /// Reads a snapshot packet and updates each player's state.
-    ///
-    /// `buf` is the whole packet: `[PacketKind::Snapshot, tick_lo, tick_hi]`
-    /// followed by a records buffer (layout in [`records::records`]).
-    /// `recv_t_s` is the time of the poses decoded from it. [`Self::sample`]
-    /// looks poses up on that same clock.
-    ///
-    /// A packet too short to have a header is ignored, and so are malformed
-    /// records and records without a session id.
-    #[func]
-    pub fn ingest_ss(&mut self, buf: PackedByteArray, recv_t_s: f64) {
-        if let Some(body) = buf.as_slice().get(SNAPSHOT_HEADER_LEN..) {
-            let history_cap = self.history_cap;
-
-            for record in records(body) {
-                let Some((sid, delta)) =
-                    PlayerDelta::read(&self.schema, record)
-                else {
-                    continue;
-                };
-
-                let player = self
-                    .players
-                    .entry(sid)
-                    .or_insert_with(|| PlayerState::new(history_cap));
-
-                player.pose.apply(&delta.pose, &self.schema, recv_t_s);
-                player.color.merge(&delta.color);
-            }
-        }
     }
 
     /// Reads a Data packet and updates the color of the players it carries.
@@ -226,5 +191,29 @@ impl PlayerStates {
         }
 
         player.color.merge(&delta.color);
+    }
+
+    /// Updates each player's pose from a records buffer (layout in
+    /// [`records::records`]).
+    ///
+    /// `t_s` is the time of the poses decoded from it. [`Self::sample`] looks
+    /// poses up on that same clock.
+    ///
+    /// Malformed records and records without a session id are skipped.
+    pub(super) fn apply_snapshot(&mut self, records_buf: &[u8], t_s: f64) {
+        for record in records(records_buf) {
+            let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
+            else {
+                continue;
+            };
+
+            let player = self
+                .players
+                .entry(sid)
+                .or_insert_with(|| PlayerState::new(self.history_cap));
+
+            player.pose.apply(&delta.pose, &self.schema, t_s);
+            player.color.merge(&delta.color);
+        }
     }
 }
