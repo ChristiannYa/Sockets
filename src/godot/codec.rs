@@ -4,11 +4,8 @@ use crate::{
     pkt::{FIELD_LENGTHS, FieldName, PacketKind},
     sim::{PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld},
 };
-use godot::{
-    meta::ToGodot,
-    prelude::{
-        Gd, GodotClass, PackedByteArray, VarArray, VarDictionary, godot_api,
-    },
+use godot::prelude::{
+    Gd, GodotClass, PackedByteArray, VarDictionary, godot_api,
 };
 
 #[derive(GodotClass)]
@@ -39,7 +36,8 @@ impl UdpCodec {
         Gd::from_init_fn(|_| Self { schema })
     }
 
-    /// Only the `Dev*` fields of a single Data packet's record
+    /// Only the `Dev*` fields of a single [`PacketKind::Data`] record that
+    /// a player needs in order to start the game
     #[func]
     fn decode_dev(&self, buf: PackedByteArray) -> VarDictionary {
         // Strip [PacketType, DecodeType] — caller has already branched on
@@ -48,7 +46,26 @@ impl UdpCodec {
             return VarDictionary::new(); // too short to even hold the header
         };
 
-        self.dev_fields(body)
+        let mut reader = BitReader::new(&self.schema, body);
+        let mut dict = VarDictionary::new();
+
+        for (field_name, _) in self.schema.fields.iter() {
+            if !reader.isset(field_name) {
+                continue;
+            }
+
+            // Read every set field, even the ones skipped below, to keep the
+            // reader's bit cursor in sync
+            let val = reader.read(field_name);
+            let is_dev = matches!(
+                field_name,
+                FieldName::DevSessionId | FieldName::DevPacketId
+            );
+            if is_dev {
+                dict.set(format!("{field_name:?}"), val);
+            }
+        }
+        dict
     }
 
     #[func]
@@ -81,34 +98,5 @@ impl UdpCodec {
         let edge_cts = PlayerIntentSimEdges { jump: jump_ct };
         let cmd = PlayerIntentSim::<u8> { held, edges: edge_cts };
         PackedByteArray::from(intent::encode(&self.schema, seq, &cmd))
-    }
-}
-
-impl UdpCodec {
-    fn dev_fields(&self, record: &[u8]) -> VarDictionary {
-        let mut reader = BitReader::new(&self.schema, record);
-        let mut dict = VarDictionary::new();
-
-        for (field_name, _) in self.schema.fields.iter() {
-            if !reader.isset(field_name) {
-                continue;
-            }
-
-            // Read every set field, even the ones skipped below, to keep the
-            // reader's bit cursor in sync
-            let val = reader.read(field_name);
-            let is_dev = matches!(
-                field_name,
-                FieldName::DevSessionId
-                    | FieldName::DevSequence
-                    | FieldName::DevPing
-                    | FieldName::DevPacketId
-                    | FieldName::DevImNew
-            );
-            if is_dev {
-                dict.set(format!("{field_name:?}"), val);
-            }
-        }
-        dict
     }
 }
