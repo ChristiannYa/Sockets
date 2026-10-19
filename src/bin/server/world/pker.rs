@@ -22,15 +22,18 @@ impl<'w> WorldPacker<'w> {
         WorldPacker { codec, players }
     }
 
-    /// Returns a reliable packet with the [FieldName::DevIsNewPlayer] flag
+    /// Returns a reliable packet with the [FieldName::DevImNew] flag
     /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
-    /// [FieldName::DevIsNewPlayer]
+    /// [FieldName::DevImNew]
     pub fn welcome_pkt(&self, rel_target: &mut RelTarget) -> Vec<u8> {
         let (pkt, _) =
-            self.rel_pkting(&[(FieldName::DevIsNewPlayer, 1)], rel_target);
+            self.rel_pkting(&[(FieldName::DevImNew, 1)], rel_target);
         pkt
     }
 
+    /// @TODO
+    /// Make this a reliable packet
+    ///
     /// Returns a packet containing all the player's metadata (non-intent data),
     /// excluding `sid`
     pub fn meta_pkt(&self, sid: u32) -> Option<Vec<u8>> {

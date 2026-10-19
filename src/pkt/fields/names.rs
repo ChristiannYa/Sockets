@@ -4,7 +4,7 @@ pub enum FieldName {
     DevSequence,
     DevPing,
     DevPacketId,
-    DevIsNewPlayer,
+    DevImNew,
     IntentSeq,
     IntentMvX,
     IntentMvZ,

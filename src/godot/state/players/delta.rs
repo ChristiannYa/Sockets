@@ -4,11 +4,11 @@ use crate::{
     pkt::FieldName,
 };
 
-/// What records carry
 #[derive(Default)]
 pub struct PlayerDelta {
     pub pose: RawPose,
     pub color: RawColor,
+    pub is_new: bool,
 }
 
 impl PlayerDelta {
@@ -33,6 +33,7 @@ impl PlayerDelta {
             let val = reader.read(name);
             match name {
                 FieldName::DevSessionId => sid = Some(val),
+                FieldName::DevImNew => delta.is_new = val == 1,
                 _ => {
                     delta.pose.set(name, val);
                     delta.color.set(name, val)

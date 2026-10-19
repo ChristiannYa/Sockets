@@ -30,6 +30,7 @@ const SNAPSHOT_HEADER_LEN: usize = 3;
 struct PlayerState {
     pose: PoseTrack,
     color: RawColor,
+    sid: Option<u32>,
 }
 
 impl PlayerState {
@@ -37,6 +38,7 @@ impl PlayerState {
         PlayerState {
             pose: PoseTrack::new(history_cap),
             color: RawColor::default(),
+            sid: None,
         }
     }
 }
@@ -48,6 +50,7 @@ pub struct PlayerStates {
     schema: PacketSchema,
     history_cap: usize,
     players: HashMap<u32, PlayerState>,
+    my_sid: Option<u32>,
 }
 
 #[godot_api]
@@ -56,8 +59,17 @@ impl PlayerStates {
     const POSE_STRIDE: i64 = POSE_STRIDE as i64;
 
     pub fn new(schema: PacketSchema, history_cap: usize) -> Self {
-        PlayerStates { schema, history_cap, players: HashMap::new() }
+        PlayerStates {
+            schema,
+            history_cap,
+            players: HashMap::new(),
+            my_sid: None,
+        }
     }
+
+    /// This player's own session id, or -1 until the server has sent it
+    #[func]
+    pub fn my_sid(&self) -> i64 { self.my_sid.map_or(-1, i64::from) }
 
     /// Session ids of every player seen so far
     #[func]
@@ -117,10 +129,10 @@ impl PlayerStates {
         };
 
         if decode_type == DecodeType::Single as u8 {
-            self.merge_color(body);
+            self.apply_delta(body);
         } else if decode_type == DecodeType::Batch as u8 {
             for record in records(body) {
-                self.merge_color(record);
+                self.apply_delta(record);
             }
         }
     }
@@ -170,11 +182,16 @@ fn pose_to_array(pose: Option<PoseSample>) -> PackedFloat32Array {
 }
 
 impl PlayerStates {
-    fn merge_color(&mut self, record: &[u8]) {
+    fn apply_delta(&mut self, record: &[u8]) {
         let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
         else {
             return;
         };
+
+        if delta.is_new {
+            self.my_sid = Some(sid)
+        }
+
         let history_cap = self.history_cap;
         let player = self
             .players

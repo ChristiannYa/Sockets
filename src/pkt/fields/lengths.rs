@@ -18,7 +18,7 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::ColorH, 6),
     (FieldName::ColorS, 3),
     (FieldName::ColorV, 3),
-    (FieldName::DevIsNewPlayer, 1),
+    (FieldName::DevImNew, 1),
     (FieldName::Health, 3),
     (FieldName::PlayerCount, 4),
     (FieldName::IsJumping, 1),

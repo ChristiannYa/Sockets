@@ -165,7 +165,7 @@ impl UdpCodec {
                     | FieldName::DevSequence
                     | FieldName::DevPing
                     | FieldName::DevPacketId
-                    | FieldName::DevIsNewPlayer
+                    | FieldName::DevImNew
             );
             if is_dev {
                 dict.set(format!("{field_name:?}"), val);
