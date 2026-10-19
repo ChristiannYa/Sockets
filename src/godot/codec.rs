@@ -51,39 +51,6 @@ impl UdpCodec {
         self.dev_fields(body)
     }
 
-    /// Only the `Dev*` fields of a single Data packet's record
-    #[func]
-    fn decode_dev_batch(&self, buf: PackedByteArray) -> VarArray {
-        // Strip [PacketType, DecodeType] before the record-count byte
-        let Some(bytes) = buf.as_slice().get(2..) else {
-            return VarArray::new();
-        };
-        self.decode_dev_records(bytes)
-    }
-
-    /// Returns `{ "tick": int, "records": Array }`, with each record holding
-    /// only its `Dev*` fields. Empty when the packet is too short to hold
-    /// the heade
-    #[func]
-    fn decode_dev_snapshot(&self, buf: PackedByteArray) -> VarDictionary {
-        let mut out = VarDictionary::new();
-
-        // [PacketKind::Snapshot, tick_lo, tick_hi] + records buf
-        let bytes = buf.as_slice();
-        let (Some(&lo), Some(&hi), Some(records)) =
-            (bytes.get(1), bytes.get(2), bytes.get(3..))
-        else {
-            return out;
-        };
-
-        out.set("tick".to_string(), u16::from_le_bytes([lo, hi]) as u32);
-        out.set(
-            "records".to_string(),
-            &self.decode_dev_records(records).to_variant(),
-        );
-        out
-    }
-
     #[func]
     fn encode(&self, fields: VarDictionary) -> PackedByteArray {
         let mut writer = BitWriter::new(&self.schema);
@@ -118,35 +85,6 @@ impl UdpCodec {
 }
 
 impl UdpCodec {
-    // @TODO
-    // Only the `Dev*` fields are kept, for the script-side handler (sequence,
-    // acks, new-player flag). Remove this and `decode`/`decode_snapshot`
-    // together with that logic once it moves to Rust.
-    fn decode_dev_records(&self, bytes: &[u8]) -> VarArray {
-        let mut buf_out = VarArray::new();
-
-        let Some((&record_count, mut records)) = bytes.split_first() else {
-            return buf_out; // Empty packet, nothing to decode
-        };
-
-        for _ in 0..record_count {
-            let Some((&record_len, rem)) = records.split_first() else {
-                break;
-            };
-            let record_len = record_len as usize;
-            if rem.len() < record_len {
-                break;
-            }
-
-            let (buf, rem) = rem.split_at(record_len);
-            records = rem;
-
-            buf_out.push(&self.dev_fields(buf).to_variant());
-        }
-
-        buf_out
-    }
-
     fn dev_fields(&self, record: &[u8]) -> VarDictionary {
         let mut reader = BitReader::new(&self.schema, record);
         let mut dict = VarDictionary::new();
