@@ -37,7 +37,7 @@ impl UdpCodec {
     }
 
     /// Only the `Dev*` fields of a single [`PacketKind::Data`] record that
-    /// a player needs in order to start the game
+    /// **need to** be handled in the client side
     #[func]
     fn decode_dev(&self, buf: PackedByteArray) -> VarDictionary {
         // Strip [PacketType, DecodeType] — caller has already branched on
