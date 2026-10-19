@@ -1,7 +1,7 @@
 use super::{color::RawColor, pose::RawPose};
 use crate::{
     bits::{BitReader, PacketSchema},
-    pkt::FieldName,
+    pkt::{FieldName, Seq},
 };
 
 #[derive(Default)]
@@ -9,6 +9,7 @@ pub struct PlayerDelta {
     pub pose: RawPose,
     pub color: RawColor,
     pub is_new: bool,
+    pub seq: Option<Seq>,
 }
 
 impl PlayerDelta {
@@ -33,6 +34,7 @@ impl PlayerDelta {
             let val = reader.read(name);
             match name {
                 FieldName::DevSessionId => sid = Some(val),
+                FieldName::DevSequence => delta.seq = Some(Seq(val as u8)),
                 FieldName::DevImNew => delta.is_new = val == 1,
                 _ => {
                     delta.pose.set(name, val);

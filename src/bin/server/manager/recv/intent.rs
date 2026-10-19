@@ -1,6 +1,6 @@
-use crate::{codec::Seq, manager::Manager};
+use crate::manager::Manager;
 use bitp::{
-    pkt::FieldName,
+    pkt::{FieldName, Seq},
     qua,
     sim::{PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld},
 };
@@ -52,7 +52,10 @@ impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
         }
 
         let mut reader = self.manager.codec.reader(self.buf);
-        if !INTENT_FIELDS.iter().all(|field_name| reader.isset(field_name)) {
+        if !INTENT_FIELDS
+            .iter()
+            .all(|field_name| reader.isset(field_name))
+        {
             return None;
         }
 

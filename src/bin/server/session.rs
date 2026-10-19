@@ -2,7 +2,11 @@ use std::{collections::HashMap, net::SocketAddr};
 
 pub struct Session {
     clis: HashMap<SocketAddr, u32>,
+
+    /// @TODO
+    /// This more related to packets, not with sessions
     seqs: HashMap<SocketAddr, u8>,
+
     next: u32,
 }
 

@@ -1,5 +1,8 @@
-use crate::{codec::Seq, world::player::edges};
-use bitp::sim::{PlayerIntentSim, PlayerIntentSimEdges};
+use crate::world::player::edges;
+use bitp::{
+    pkt::Seq,
+    sim::{PlayerIntentSim, PlayerIntentSimEdges},
+};
 use std::collections::VecDeque;
 
 const QUEUE_MAX: usize = 8;
@@ -34,7 +37,10 @@ impl PlayerIntentQueue {
     }
 
     pub fn queue(&mut self, seq: Seq, cmd: PlayerIntentSim<u8>) {
-        if self.latest_seq.is_some_and(|latest| !seq.is_newer_than(latest)) {
+        if self
+            .latest_seq
+            .is_some_and(|latest| !seq.is_newer_than(latest))
+        {
             return; // duplicate or stale
         }
         self.latest_seq = Some(seq);

@@ -10,7 +10,10 @@ mod delta;
 mod pose;
 mod records;
 
-use crate::bits::{DecodeType, PacketSchema};
+use crate::{
+    bits::{DecodeType, PacketSchema},
+    pkt::Seq,
+};
 use color::RawColor;
 use delta::PlayerDelta;
 use pose::PoseTrack;
@@ -30,6 +33,7 @@ const SNAPSHOT_HEADER_LEN: usize = 3;
 struct PlayerState {
     pose: PoseTrack,
     color: RawColor,
+    last_seq: Option<Seq>,
 }
 
 impl PlayerState {
@@ -37,7 +41,29 @@ impl PlayerState {
         PlayerState {
             pose: PoseTrack::new(history_cap),
             color: RawColor::default(),
+            last_seq: None,
         }
+    }
+
+    /// Whether a record with this sequence number should be applied.
+    ///
+    /// Records without one are always applied. Otherwise the record must be
+    /// newer than the last one applied, so late or repeated packets get
+    /// dropped.
+    fn apply_seq(&mut self, seq: Option<Seq>) -> bool {
+        let Some(seq) = seq else {
+            return true;
+        };
+
+        if self
+            .last_seq
+            .is_some_and(|last| !seq.is_newer_than(last))
+        {
+            return false;
+        }
+
+        self.last_seq = Some(seq);
+        true
     }
 }
 
@@ -190,11 +216,15 @@ impl PlayerStates {
             self.my_sid = Some(sid)
         }
 
-        let history_cap = self.history_cap;
         let player = self
             .players
             .entry(sid)
-            .or_insert_with(|| PlayerState::new(history_cap));
+            .or_insert_with(|| PlayerState::new(self.history_cap));
+
+        if !player.apply_seq(delta.seq) {
+            return;
+        }
+
         player.color.merge(&delta.color);
     }
 }
