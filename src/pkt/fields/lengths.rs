@@ -3,8 +3,9 @@ use crate::pkt::FieldName;
 pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::DevSessionId, 6),
     (FieldName::DevSequence, 8),
-    (FieldName::DevPacketId, 8),
     (FieldName::DevPing, 1),
+    (FieldName::DevPacketId, 8),
+    (FieldName::DevImNew, 1),
     (FieldName::IntentSeq, 8),
     (FieldName::IntentMvX, 6),
     (FieldName::IntentMvZ, 6),
@@ -18,7 +19,6 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::ColorH, 6),
     (FieldName::ColorS, 3),
     (FieldName::ColorV, 3),
-    (FieldName::DevImNew, 1),
     (FieldName::Health, 3),
     (FieldName::PlayerCount, 4),
     (FieldName::IsJumping, 1),

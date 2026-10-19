@@ -30,7 +30,6 @@ const SNAPSHOT_HEADER_LEN: usize = 3;
 struct PlayerState {
     pose: PoseTrack,
     color: RawColor,
-    sid: Option<u32>,
 }
 
 impl PlayerState {
@@ -38,7 +37,6 @@ impl PlayerState {
         PlayerState {
             pose: PoseTrack::new(history_cap),
             color: RawColor::default(),
-            sid: None,
         }
     }
 }
