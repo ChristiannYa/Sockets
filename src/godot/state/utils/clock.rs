@@ -3,7 +3,7 @@
 /// Seconds between two server ticks
 const TICK_DT: f64 = 1.0 / 60.0;
 
-pub struct SnapshotClock {
+pub struct Clock {
     /// Newest tick seen, counted past the 2-byte wrap. `None` until the first
     /// snapshot arrives.
     tick: Option<i64>,
@@ -11,8 +11,8 @@ pub struct SnapshotClock {
     offset: f64,
 }
 
-impl SnapshotClock {
-    pub fn new() -> Self { SnapshotClock { tick: None, offset: 0.0 } }
+impl Clock {
+    pub fn new() -> Self { Clock { tick: None, offset: 0.0 } }
 
     /// Takes a snapshot's tick and the time it arrived.
     ///
@@ -47,17 +47,17 @@ impl SnapshotClock {
 
 #[cfg(test)]
 mod tests {
-    use super::{SnapshotClock, TICK_DT};
+    use super::{Clock, TICK_DT};
 
     #[test]
     fn first_snapshot_is_accepted() {
-        let mut c = SnapshotClock::new();
+        let mut c = Clock::new();
         assert!(c.accept(7, 1.0).is_some());
     }
 
     #[test]
     fn duplicates_and_older_are_dropped() {
-        let mut c = SnapshotClock::new();
+        let mut c = Clock::new();
         assert!(c.accept(10, 1.0).is_some());
         assert!(c.accept(10, 1.1).is_none());
         assert!(c.accept(9, 1.1).is_none());
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn counts_past_the_wrap() {
-        let mut c = SnapshotClock::new();
+        let mut c = Clock::new();
         let a = c.accept(65535, 100.0).unwrap();
         let b = c.accept(0, 100.0 + TICK_DT).unwrap();
         assert!((b - a - TICK_DT).abs() < 1e-9);
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn a_late_packet_does_not_push_time_later() {
-        let mut c = SnapshotClock::new();
+        let mut c = Clock::new();
         c.accept(0, 10.0);
         // arrives 50 ms later than its tick says
         let t = c.accept(1, 10.0 + TICK_DT + 0.05).unwrap();
