@@ -31,24 +31,9 @@ impl<'w> WorldPacker<'w> {
         pkt
     }
 
-    /// Returns a buffer containing every other connected player's state to sync a
-    /// newly-joined player.
-    ///
-    /// Layout:
-    /// ```
-    /// let record_count = vec![2];
-    ///
-    /// // 1=record_len, 2=mask_bytes, 3=value_bytes
-    /// // `record_len` is the byte length of the player's `BitWriter::buf()`'s
-    /// // output, including `SessionId` as a "seed" value to identify the record
-    /// let record1 = vec![1, 2, 3];
-    /// let record2 = vec![1, 2, 3];
-    ///
-    /// // [2, 1, 2, 3, 1, 2, 3]
-    /// return [record_count, record1, record2].concat()
-    /// ```
-    pub fn sync_pkt(&self, sid: u32) -> Option<Vec<u8>> {
-        let loc_qua = qua::loc(self.codec.schema());
+    /// Returns a packet containing all the player's metadata (non-intent data),
+    /// excluding `sid`
+    pub fn meta_pkt(&self, sid: u32) -> Option<Vec<u8>> {
         let hsv_qua = qua::hsv(self.codec.schema());
 
         let records: Vec<Vec<u8>> = self
@@ -56,14 +41,9 @@ impl<'w> WorldPacker<'w> {
             .iter()
             .filter(|(sid_iter, _)| **sid_iter != sid)
             .map(|(sid, p)| {
-                let [x, y, z] = p.state.pos;
-
                 self.pk(FieldsPack {
                     id: None,
                     fields: &[
-                        (FieldName::LocationX, loc_qua.x.encode(x)),
-                        (FieldName::LocationY, qua::intent::Y.encode(y)),
-                        (FieldName::LocationZ, loc_qua.z.encode(z)),
                         (FieldName::ColorH, hsv_qua.h.encode(p.color.h)),
                         (FieldName::ColorS, hsv_qua.s.encode(p.color.s)),
                         (FieldName::ColorV, hsv_qua.v.encode(p.color.v)),
@@ -214,8 +194,19 @@ impl<'w> WorldPacker<'w> {
         writer.buf()
     }
 
-    /// `[record_ct, (record_len, record)...]`, shared by every packet that
-    /// carries records
+    /// Layout:
+    /// ```
+    /// let record_count = vec![2];
+    ///
+    /// // 1=record_len, 2=mask_bytes, 3=value_bytes
+    /// // `record_len` is the byte length of the player's `BitWriter::buf()`'s
+    /// // output, including `SessionId` as a "seed" value to identify the record
+    /// let record1 = vec![1, 2, 3];
+    /// let record2 = vec![1, 2, 3];
+    ///
+    /// // [2, 1, 2, 3, 1, 2, 3]
+    /// return [record_count, record1, record2].concat()
+    /// ```
     fn records_buf(records: Vec<Vec<u8>>) -> Vec<u8> {
         let mut buf = vec![records.len() as u8];
         for record in records {

@@ -71,7 +71,7 @@ impl<'d, 'c, 'w> DataPkt<'d, 'c, 'w> {
             self.manager.pending_pkts,
         );
 
-        if let Some(sync_buf) = self.manager.world.pker().sync_pkt(sid) {
+        if let Some(sync_buf) = self.manager.world.pker().meta_pkt(sid) {
             self.manager.net.send_to(&sync_buf, self.skt_src);
         }
     }
