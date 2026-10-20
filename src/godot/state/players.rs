@@ -99,7 +99,7 @@ impl PlayerStates {
     /// Reads a Data packet and updates the color of the players it carries.
     ///
     /// `buf` is `[PacketKind::Data, DecodeType]` followed by one record
-    /// (single) or a records buffer (batch, layout in [`records::records`]).
+    /// (single) or a records buffer (batch, layout in [`records::split`]).
     ///
     /// Only color is taken from these records. Their poses have no snapshot
     /// time, so only snapshots feed the pose history.
@@ -190,7 +190,7 @@ impl PlayerStates {
     }
 
     /// Updates each player's pose from a records buffer (layout in
-    /// [`records::records`]).
+    /// [`records::split`]).
     ///
     /// `t_s` is the time of the poses decoded from it. [`Self::sample`] looks
     /// poses up on that same clock.
