@@ -1,5 +1,3 @@
-//! Everything the game knows about each player, kept in Rust.
-//!
 //! Every call across the Godot–Rust boundary (FFI) has a cost, so the work is
 //! batched: one call per packet (`ingest_ss`) and one call per player per
 //! frame (`sample`). Reading records, merging partial ones, decoding and
@@ -26,7 +24,6 @@ use godot::prelude::{
     godot_api,
 };
 
-/// Everything known about one player. Color joins `pose` here later.
 struct PlayerState {
     pose: PoseTrack,
     color: RawColor,

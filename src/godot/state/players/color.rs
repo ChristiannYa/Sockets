@@ -1,6 +1,5 @@
 use crate::{bits::PacketSchema, pkt::FieldName, qua, util::Hsv};
 
-/// Raw (still wire-encoded) color fields of one player
 #[derive(Default)]
 pub struct RawColor {
     h: Option<u32>,
@@ -9,8 +8,6 @@ pub struct RawColor {
 }
 
 impl RawColor {
-    /// Stores `val` if `name` is one of the color fields, ignores it
-    /// otherwise
     pub fn set(&mut self, name: &FieldName, val: u32) {
         match name {
             FieldName::ColorH => self.h = Some(val),
@@ -20,15 +17,12 @@ impl RawColor {
         }
     }
 
-    /// Overwrite with the fields that `new` carries (same rule as
-    /// [`RawPose::merge`](super::pose::RawPose::merge))
     pub fn merge(&mut self, new: &RawColor) {
         self.h = new.h.or(self.h);
         self.s = new.s.or(self.s);
         self.v = new.v.or(self.v);
     }
 
-    /// `None` until every colour field has been received at least once
     pub fn decode(&self, schema: &PacketSchema) -> Option<Hsv> {
         let hsv = qua::hsv(schema);
         Some(Hsv {
