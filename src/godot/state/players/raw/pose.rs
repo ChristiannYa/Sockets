@@ -1,4 +1,4 @@
-use super::PoseSample;
+use super::super::pose::PoseSample;
 use crate::{bits::PacketSchema, pkt::FieldName, qua};
 
 #[derive(Default)]

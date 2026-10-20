@@ -1,4 +1,4 @@
-use super::{color::RawColor, pose::RawPose};
+use super::raw::{RawColor, RawPose};
 use crate::{
     bits::{BitReader, PacketSchema},
     pkt::{FieldName, Seq},

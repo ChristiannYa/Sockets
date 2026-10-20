@@ -1,7 +1,6 @@
 mod history;
 
-use super::PoseSample;
-use super::raw::RawPose;
+use super::{PoseSample, RawPose};
 use crate::bits::PacketSchema;
 use history::PoseHistory;
 

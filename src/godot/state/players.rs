@@ -3,20 +3,19 @@
 //! frame (`sample`). Reading records, merging partial ones, decoding and
 //! keeping the history all stay in Rust, between those two calls.
 
-mod color;
 mod delta;
 mod pose;
+mod raw;
 mod records;
 
 use crate::{
     bits::{DecodeType, PacketSchema},
     pkt::Seq,
 };
-use color::RawColor;
 use delta::PlayerDelta;
 use pose::PoseTrack;
 pub use pose::{POSE_STRIDE, PoseSample};
-use records::records;
+use raw::RawColor;
 use std::collections::HashMap;
 
 use godot::prelude::{
@@ -117,7 +116,7 @@ impl PlayerStates {
         if decode_type == DecodeType::Single as u8 {
             self.apply_delta(body);
         } else if decode_type == DecodeType::Batch as u8 {
-            for record in records(body) {
+            for record in records::split(body) {
                 self.apply_delta(record);
             }
         }
@@ -198,7 +197,7 @@ impl PlayerStates {
     ///
     /// Malformed records and records without a session id are skipped.
     pub(super) fn apply_snapshot(&mut self, records_buf: &[u8], t_s: f64) {
-        for record in records(records_buf) {
+        for record in records::split(records_buf) {
             let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
             else {
                 continue;

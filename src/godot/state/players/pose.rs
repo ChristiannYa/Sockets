@@ -9,10 +9,9 @@
 //! merges them with what is already known and decodes a pose once every
 //! field is known.
 
-mod raw;
 mod sample;
 mod track;
 
-pub use raw::RawPose;
+use super::raw::RawPose;
 pub use sample::{POSE_STRIDE, PoseSample};
 pub use track::PoseTrack;
