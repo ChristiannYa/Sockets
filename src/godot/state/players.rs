@@ -123,20 +123,20 @@ impl PlayerStates {
     }
 
     #[func]
-    fn sample(&self, sid: i64, at_t_s: f64) -> PackedFloat32Array {
+    fn sample(&self, sid: i64, t_s: f64) -> PackedFloat32Array {
         pose_to_array(
-            u32::try_from(sid).ok().and_then(|sid| {
-                self.players.get(&sid)?.pose.history.at(at_t_s)
-            }),
+            u32::try_from(sid)
+                .ok()
+                .and_then(|sid| self.players.get(&sid)?.pose.at(t_s)),
         )
     }
 
     #[func]
     fn latest(&self, sid: i64) -> PackedFloat32Array {
         pose_to_array(
-            u32::try_from(sid).ok().and_then(|sid| {
-                self.players.get(&sid)?.pose.history.latest()
-            }),
+            u32::try_from(sid)
+                .ok()
+                .and_then(|sid| self.players.get(&sid)?.pose.latest()),
         )
     }
 

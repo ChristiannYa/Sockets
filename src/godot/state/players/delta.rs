@@ -15,7 +15,7 @@ pub struct PlayerDelta {
 impl PlayerDelta {
     /// Read a record in a single pass.
     /// Returns the session id and what the record carried, or [`None`] for a
-    /// malformed record or one without an id.
+    /// malformed record (!mask_fits())
     pub fn read(schema: &PacketSchema, record: &[u8]) -> Option<(u32, Self)> {
         if !schema.mask_fits(record) {
             return None;
