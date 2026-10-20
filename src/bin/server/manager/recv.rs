@@ -1,9 +1,10 @@
+mod ack;
 mod data;
 mod intent;
 
 use crate::manager::{
     Manager,
-    recv::{data::DataPkt, intent::IntentPkt},
+    recv::{ack::AckPkt, data::DataPkt, intent::IntentPkt},
 };
 use bitp::pkt::PacketKind;
 use std::net::SocketAddr;
@@ -14,15 +15,7 @@ pub fn cli(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
     };
 
     match PacketKind::try_from(kind) {
-        Ok(PacketKind::Ack) => {
-            if let Some(id) = bitp::rel::ack::decode(buf) {
-                crate::rel::ack::handle_ack(
-                    manager.pending_pkts,
-                    id,
-                    &skt_src,
-                );
-            }
-        }
+        Ok(PacketKind::Ack) => AckPkt::new(manager, buf, skt_src).recv(),
         Ok(PacketKind::Data) => {
             if let Some(buf) = buf.get(2..) {
                 DataPkt::new(manager, skt_src, buf).recv();
