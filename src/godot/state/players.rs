@@ -209,7 +209,6 @@ impl PlayerStates {
                 .or_insert_with(|| PlayerState::new(self.history_cap));
 
             player.pose.apply(&delta.pose, &self.schema, t_s);
-            player.color.merge(&delta.color);
         }
     }
 }
