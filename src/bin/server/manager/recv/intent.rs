@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use crate::manager::Manager;
 use bitp::{
     pkt::{FieldName, Seq},
@@ -14,63 +16,58 @@ const INTENT_FIELDS: [FieldName; 6] = [
     FieldName::IntentCrouch,
 ];
 
-pub struct IntentPkt<'i, 'c, 'w> {
-    manager: &'i mut Manager<'c, 'w>,
-    buf: &'i [u8],
-    sid: u32,
+pub fn recv(manager: &mut Manager, skt_src: SocketAddr, buf: &[u8]) {
+    let Some(sid) = manager.sess.id_of(&skt_src) else {
+        return;
+    };
+
+    let Some(buf) = buf.get(1..) else {
+        return;
+    };
+
+    let Some((seq, cmd)) = decode(manager, buf) else {
+        return;
+    };
+
+    if let Some(player) = manager.world.player_mut_ref(sid) {
+        player.intent_queue.queue(seq, cmd);
+    }
 }
 
-impl<'i, 'c, 'w> IntentPkt<'i, 'c, 'w> {
-    pub fn new(
-        manager: &'i mut Manager<'c, 'w>,
-        buf: &'i [u8],
-        sid: u32,
-    ) -> Self {
-        IntentPkt { manager, buf, sid }
+fn decode(
+    manager: &Manager,
+    buf: &[u8],
+) -> Option<(Seq, PlayerIntentSim<u8>)> {
+    let schema = manager.codec.schema();
+
+    let payload_ceil_len = INTENT_FIELDS
+        .iter()
+        .map(|field_name| schema.info_of(field_name).len)
+        .sum::<usize>()
+        .div_ceil(8);
+    if buf.len() < schema.mask_len() + payload_ceil_len {
+        return None;
     }
 
-    pub fn recv(&mut self) {
-        let Some((seq, cmd)) = self.decode() else {
-            return;
-        };
-
-        if let Some(player) = self.manager.world.player_mut_ref(self.sid) {
-            player.intent_queue.queue(seq, cmd);
-        }
+    let mut reader = manager.codec.reader(buf);
+    if !INTENT_FIELDS
+        .iter()
+        .all(|field_name| reader.isset(field_name))
+    {
+        return None;
     }
 
-    fn decode(&self) -> Option<(Seq, PlayerIntentSim<u8>)> {
-        let schema = self.manager.codec.schema();
+    let seq = Seq(reader.read(&FieldName::IntentSeq) as u8);
 
-        let payload_ceil_len = INTENT_FIELDS
-            .iter()
-            .map(|field_name| schema.info_of(field_name).len)
-            .sum::<usize>()
-            .div_ceil(8);
-        if self.buf.len() < schema.mask_len() + payload_ceil_len {
-            return None;
-        }
+    let mv_x = qua::intent::MV.decode(reader.read(&FieldName::IntentMvX));
+    let mv_z = qua::intent::MV.decode(reader.read(&FieldName::IntentMvZ));
+    let yaw = qua::intent::YAW.decode(reader.read(&FieldName::IntentYaw));
+    let jump_ct = reader.read(&FieldName::IntentJump) as u8;
+    let crouch = reader.read(&FieldName::IntentCrouch) == 1;
 
-        let mut reader = self.manager.codec.reader(self.buf);
-        if !INTENT_FIELDS
-            .iter()
-            .all(|field_name| reader.isset(field_name))
-        {
-            return None;
-        }
+    let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, crouch };
+    let edges = PlayerIntentSimEdges { jump: jump_ct };
+    let cmd = PlayerIntentSim::<u8> { held, edges };
 
-        let seq = Seq(reader.read(&FieldName::IntentSeq) as u8);
-
-        let mv_x = qua::intent::MV.decode(reader.read(&FieldName::IntentMvX));
-        let mv_z = qua::intent::MV.decode(reader.read(&FieldName::IntentMvZ));
-        let yaw = qua::intent::YAW.decode(reader.read(&FieldName::IntentYaw));
-        let jump_ct = reader.read(&FieldName::IntentJump) as u8;
-        let crouch = reader.read(&FieldName::IntentCrouch) == 1;
-
-        let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, crouch };
-        let edges = PlayerIntentSimEdges { jump: jump_ct };
-        let cmd = PlayerIntentSim::<u8> { held, edges };
-
-        Some((seq, cmd))
-    }
+    Some((seq, cmd))
 }
