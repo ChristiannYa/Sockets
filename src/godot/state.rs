@@ -49,7 +49,7 @@
 mod players;
 mod utils;
 
-use crate::{bits::PacketSchema, pkt::FIELD_LENGTHS};
+use crate::{bits::PacketSchema, logt, pkt::FIELD_LENGTHS};
 use godot::prelude::{Gd, GodotClass, PackedByteArray, godot_api};
 use players::PlayerStates;
 use utils::Clock;
@@ -57,11 +57,17 @@ use utils::Clock;
 /// `[PacketKind::Snapshot, tick_lo, tick_hi]`, followed by the records
 const SNAPSHOT_HEADER_LEN: usize = 3;
 
+/// Gap between snapshot arrivals. If longer than this gets logged
+const GAP_WARN_S: f64 = 0.050;
+
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
 pub struct UdpState {
     players: Gd<PlayerStates>,
     clock: Clock,
+
+    /// (arrival_s, snapshot_s)
+    last_accs_ss: Option<(f64, f64)>,
 }
 
 #[godot_api]
@@ -74,7 +80,7 @@ impl UdpState {
         let cap = history_cap.max(2) as usize;
         let players = Gd::from_object(PlayerStates::new(schema, cap));
 
-        Gd::from_init_fn(|_| Self { players, clock })
+        Gd::from_init_fn(|_| Self { players, clock, last_accs_ss: None })
     }
 
     #[func]
@@ -83,8 +89,8 @@ impl UdpState {
     /// Takes a whole snapshot packet and updates the players from it.
     ///
     /// `arrival_s` is when it arrived. Returns `false` when the packet was
-    /// dropped: too short, or not newer than the last snapshot (a duplicate or
-    /// a reordered packet).
+    /// dropped: too short, or not newer than the last snapshot (a duplicate
+    /// or a reordered packet).
     #[func]
     fn ingest_ss(&mut self, buf: PackedByteArray, arrival_s: f64) -> bool {
         let bytes = buf.as_slice();
@@ -96,13 +102,35 @@ impl UdpState {
         };
 
         let tick = u16::from_le_bytes([*lo, *hi]);
-        let Some(snapshot_s) = self.clock.accept(tick, arrival_s) else {
+        let Some(ss_s) = self.clock.accept(tick, arrival_s) else {
             return false;
         };
+        self.track_ss_gap(arrival_s, ss_s);
 
-        self.players
-            .bind_mut()
-            .apply_snapshot(records, snapshot_s);
+        self.players.bind_mut().apply_snapshot(records, ss_s);
         true
+    }
+}
+
+impl UdpState {
+    /// Logs when too much time passed between snapshot arrivals. Compare the
+    /// two numbers in the line:
+    /// - about equal: the snapshots in between never arrived (lost, or never sent)
+    /// - arrival gap big, server time about one tick: the next snapshot came
+    ///   late (delay or WiFi stall, not loss)
+    fn track_ss_gap(&mut self, arrival_s: f64, ss_s: f64) {
+        if let Some((prev_s, prev_ss)) = self.last_accs_ss {
+            let arrival_gap = arrival_s - prev_s;
+            if arrival_gap > GAP_WARN_S {
+                let ss_gap = ss_s - prev_ss;
+                logt!(
+                    "ss gap: nothing arrived for {:.0}ms (server time between: {:.0}ms)",
+                    arrival_gap * 1000.0,
+                    ss_gap * 1000.0
+                );
+            }
+        }
+
+        self.last_accs_ss = Some((arrival_s, ss_s));
     }
 }

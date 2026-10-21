@@ -1,11 +1,15 @@
 use crate::world::player::edges;
 use bitp::{
+    logt,
     pkt::Seq,
     sim::{PlayerIntentSim, PlayerIntentSimEdges},
 };
 use std::collections::VecDeque;
 
 const QUEUE_MAX: usize = 8;
+
+/// Ticks in a row without a queued intent before it gets a log line
+const DRY_WARN_TICKS: u32 = 3;
 
 pub struct PlayerIntentQueue {
     queue: VecDeque<(Seq, PlayerIntentSim<u8>)>,
@@ -23,6 +27,9 @@ pub struct PlayerIntentQueue {
     /// None until the first intent, which only seeds it, so a player whose
     /// counters aren't 0 can't fire phantom events.
     simed_edge_cts: Option<PlayerIntentSimEdges<u8>>,
+
+    /// Ticks in a row where the queue was empty
+    dry_ticks: u32,
 }
 
 impl PlayerIntentQueue {
@@ -33,6 +40,7 @@ impl PlayerIntentQueue {
             latest_seq: None,
             simed_seq: Seq(0),
             simed_edge_cts: None,
+            dry_ticks: 0,
         }
     }
 
@@ -57,6 +65,14 @@ impl PlayerIntentQueue {
     pub fn next(&mut self) -> PlayerIntentSim<bool> {
         match self.queue.pop_front() {
             Some((simed_seq, cmd)) => {
+                if self.dry_ticks >= DRY_WARN_TICKS {
+                    logt!(
+                        "intents flowing again after {} dry ticks",
+                        self.dry_ticks
+                    );
+                }
+                self.dry_ticks = 0;
+
                 let edges = match self.simed_edge_cts {
                     Some(prev) => edges::diffs(cmd.edges, prev),
                     None => PlayerIntentSimEdges::default(),
@@ -67,7 +83,16 @@ impl PlayerIntentQueue {
                 self.last_sim =
                     PlayerIntentSim::<bool> { held: cmd.held, edges };
             }
-            None => self.last_sim = self.last_sim.held_only(),
+            None => {
+                self.dry_ticks += 1;
+                if self.dry_ticks == DRY_WARN_TICKS {
+                    logt!(
+                        "intent queue ran dry for {DRY_WARN_TICKS} ticks, repeating last input"
+                    );
+                }
+
+                self.last_sim = self.last_sim.held_only();
+            }
         }
         self.last_sim
     }

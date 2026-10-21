@@ -10,6 +10,7 @@ mod records;
 
 use crate::{
     bits::{DecodeType, PacketSchema},
+    logt,
     pkt::Seq,
 };
 use delta::PlayerDelta;
@@ -22,6 +23,10 @@ use godot::prelude::{
     GodotClass, PackedByteArray, PackedFloat32Array, PackedInt32Array,
     godot_api,
 };
+
+/// How far the render time must be past the newest snapshot to count as a
+/// freeze (~1 server tick)
+const FREEZE_MIN_S: f64 = 0.020;
 
 struct PlayerState {
     pose: PoseTrack,
@@ -68,6 +73,12 @@ pub struct PlayerStates {
     history_cap: usize,
     players: HashMap<u32, PlayerState>,
     my_sid: Option<u32>,
+
+    /// Time of the newest snapshot applied, on the local clock
+    newest_ss_s: Option<f64>,
+
+    /// Render time when the current freeze began. [`None`] while smooth.
+    frozen_since_s: Option<f64>,
 }
 
 #[godot_api]
@@ -81,6 +92,8 @@ impl PlayerStates {
             history_cap,
             players: HashMap::new(),
             my_sid: None,
+            newest_ss_s: None,
+            frozen_since_s: None,
         }
     }
 
@@ -123,7 +136,8 @@ impl PlayerStates {
     }
 
     #[func]
-    fn sample(&self, sid: i64, t_s: f64) -> PackedFloat32Array {
+    fn sample(&mut self, sid: i64, t_s: f64) -> PackedFloat32Array {
+        self.watch_freeze(t_s);
         pose_to_array(
             u32::try_from(sid)
                 .ok()
@@ -197,6 +211,8 @@ impl PlayerStates {
     ///
     /// Malformed records and records without a session id are skipped.
     pub(super) fn apply_snapshot(&mut self, records_buf: &[u8], t_s: f64) {
+        self.newest_ss_s = Some(t_s);
+
         for record in records::split(records_buf) {
             let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
             else {
@@ -209,6 +225,30 @@ impl PlayerStates {
                 .or_insert_with(|| PlayerState::new(self.history_cap));
 
             player.pose.apply(&delta.pose, &self.schema, t_s);
+        }
+    }
+
+    /// Logs once when the render time passes the newest snapshot (no more
+    /// data to play) and once when it recovers.
+    fn watch_freeze(&mut self, t_s: f64) {
+        let Some(newest_ss_s) = self.newest_ss_s else {
+            return;
+        };
+        let past_s = t_s - newest_ss_s;
+
+        match (self.frozen_since_s, past_s > FREEZE_MIN_S) {
+            (None, true) => {
+                self.frozen_since_s = Some(t_s);
+                logt!(
+                    "FREEZE: render {:.0}ms past the newest",
+                    past_s * 1000.0
+                );
+            }
+            (Some(since), false) => {
+                self.frozen_since_s = None;
+                logt!("UNFROZEN: after {:.0}ms", (t_s - since) * 1000.0);
+            }
+            _ => {}
         }
     }
 }
