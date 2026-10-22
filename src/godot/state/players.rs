@@ -8,6 +8,7 @@ mod pose;
 mod raw;
 mod records;
 
+use super::GAP_WARN_S;
 use crate::{
     bits::{DecodeType, PacketSchema},
     logt,
@@ -17,7 +18,7 @@ use delta::PlayerDelta;
 use pose::PoseTrack;
 pub use pose::{POSE_STRIDE, PoseSample};
 use raw::RawColor;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
 use godot::prelude::{
     GodotClass, PackedByteArray, PackedFloat32Array, PackedInt32Array,
@@ -79,6 +80,15 @@ pub struct PlayerStates {
 
     /// Render time when the current freeze began. [`None`] while smooth.
     frozen_since_s: Option<f64>,
+
+    /// When the newest snapshot was applied
+    last_ss_at: Option<Instant>,
+
+    /// When [`Self::latest`] last ran, which is about once per frame
+    last_frame_at: Option<Instant>,
+
+    /// A STALL line was already logged for the current silence
+    stall_logged: bool,
 }
 
 #[godot_api]
@@ -94,6 +104,9 @@ impl PlayerStates {
             my_sid: None,
             newest_ss_s: None,
             frozen_since_s: None,
+            last_ss_at: None,
+            last_frame_at: None,
+            stall_logged: false,
         }
     }
 
@@ -146,7 +159,8 @@ impl PlayerStates {
     }
 
     #[func]
-    fn latest(&self, sid: i64) -> PackedFloat32Array {
+    fn latest(&mut self, sid: i64) -> PackedFloat32Array {
+        self.watch_stall();
         pose_to_array(
             u32::try_from(sid)
                 .ok()
@@ -212,6 +226,8 @@ impl PlayerStates {
     /// Malformed records and records without a session id are skipped.
     pub(super) fn apply_snapshot(&mut self, records_buf: &[u8], t_s: f64) {
         self.newest_ss_s = Some(t_s);
+        self.last_ss_at = Some(Instant::now());
+        self.stall_logged = false;
 
         for record in records::split(records_buf) {
             let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
@@ -249,6 +265,31 @@ impl PlayerStates {
                 logt!("UNFROZEN: after {:.0}ms", (t_s - since) * 1000.0);
             }
             _ => {}
+        }
+    }
+
+    /// Logs once, while it is happening, when no snapshot has arrived for
+    /// longer than [`GAP_WARN_S`]. [`Self::latest`] runs every frame for the
+    /// local player, so this fires mid-freeze instead of after it.
+    fn watch_stall(&mut self) {
+        let now = Instant::now();
+        let frame_gap_s = self
+            .last_frame_at
+            .replace(now)
+            .map(|prev| now.duration_since(prev).as_secs_f64());
+
+        let Some(ss_at) = self.last_ss_at else {
+            return;
+        };
+        let since_ss_s = now.duration_since(ss_at).as_secs_f64();
+
+        if since_ss_s > GAP_WARN_S && !self.stall_logged {
+            self.stall_logged = true;
+            logt!(
+                "STALL: no snapshot for {:.0}ms and counting (last frame took {:.0}ms)",
+                since_ss_s * 1000.0,
+                frame_gap_s.unwrap_or(0.0) * 1000.0
+            );
         }
     }
 }
