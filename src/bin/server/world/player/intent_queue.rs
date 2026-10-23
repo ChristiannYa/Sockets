@@ -1,15 +1,14 @@
+mod debug;
+
 use crate::world::player::edges;
 use bitp::{
-    logt,
     pkt::Seq,
     sim::{PlayerIntentSim, PlayerIntentSimEdges},
 };
+use debug::PlayerIntentQueueDbg;
 use std::collections::VecDeque;
 
 const QUEUE_MAX: usize = 8;
-
-/// Ticks in a row without a queued intent before it gets a log line
-const DRY_WARN_TICKS: u32 = 3;
 
 pub struct PlayerIntentQueue {
     queue: VecDeque<(Seq, PlayerIntentSim<u8>)>,
@@ -28,11 +27,7 @@ pub struct PlayerIntentQueue {
     /// counters aren't 0 can't fire phantom events.
     simed_edge_cts: Option<PlayerIntentSimEdges<u8>>,
 
-    /// @TODO
-    /// Place in a dedicated debug wrapper
-    ///
-    /// Ticks in a row where the queue was empty
-    dry_ticks: u32,
+    dbg: PlayerIntentQueueDbg,
 }
 
 impl PlayerIntentQueue {
@@ -43,7 +38,7 @@ impl PlayerIntentQueue {
             latest_seq: None,
             simed_seq: Seq(0),
             simed_edge_cts: None,
-            dry_ticks: 0,
+            dbg: PlayerIntentQueueDbg::new(),
         }
     }
 
@@ -68,35 +63,24 @@ impl PlayerIntentQueue {
     pub fn next(&mut self) -> PlayerIntentSim<bool> {
         match self.queue.pop_front() {
             Some((seq, int)) => {
-                if self.dry_ticks >= DRY_WARN_TICKS {
-                    logt!(
-                        "intents flowing again after {} dry ticks",
-                        self.dry_ticks
-                    );
-                }
-                self.dry_ticks = 0;
+                self.dbg.on_queue_found();
 
                 let edges = match self.simed_edge_cts {
                     Some(prev) => edges::diffs(int.edges, prev),
                     None => PlayerIntentSimEdges::default(),
                 };
-                self.simed_edge_cts = Some(int.edges);
 
+                self.simed_edge_cts = Some(int.edges);
                 self.simed_seq = seq;
                 self.last_sim =
                     PlayerIntentSim::<bool> { held: int.held, edges };
             }
             None => {
-                self.dry_ticks += 1;
-                if self.dry_ticks == DRY_WARN_TICKS {
-                    logt!(
-                        "intent queue ran dry for {DRY_WARN_TICKS} ticks, repeating last input"
-                    );
-                }
-
+                self.dbg.on_queue_dry();
                 self.last_sim = self.last_sim.held_only();
             }
         }
+
         self.last_sim
     }
 }
