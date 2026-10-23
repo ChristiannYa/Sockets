@@ -13,6 +13,16 @@ pub enum Event {
     SimTick,
 }
 
+impl Event {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Event::Client(..) => "Client",
+            Event::Retry => "Retry",
+            Event::SimTick => "SimTick",
+        }
+    }
+}
+
 const RETRY_CHECK_INTV: Duration = Duration::from_millis(20);
 const SIM_TICK_INTV: Duration = Duration::from_micros(16_667);
 
@@ -55,10 +65,7 @@ pub fn spawn(skt: UdpSocket) -> Receiver<(Instant, Event)> {
                 logt!("tick thread late by {late:?}");
             }
 
-            if tx_tick
-                .send((Instant::now(), Event::SimTick))
-                .is_err()
-            {
+            if tx_tick.send((Instant::now(), Event::SimTick)).is_err() {
                 break;
             }
 
@@ -75,10 +82,7 @@ pub fn spawn(skt: UdpSocket) -> Receiver<(Instant, Event)> {
         loop {
             thread::sleep(RETRY_CHECK_INTV);
 
-            if tx
-                .send((Instant::now(), Event::Retry))
-                .is_err()
-            {
+            if tx.send((Instant::now(), Event::Retry)).is_err() {
                 break;
             }
         }

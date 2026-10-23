@@ -2,10 +2,9 @@ mod recv;
 mod retry;
 mod sim;
 
-use std::net::SocketAddr;
-
 use crate::{
     codec::Codec,
+    events::Event,
     net::Net,
     rel::{dedup::AddrsSeenPacketIds, retx::PendingPackets},
     session::Session,
@@ -32,11 +31,12 @@ impl<'c, 'w> Manager<'c, 'w> {
     ) -> Self {
         Manager { net, sess, codec, world, pending_pkts, addrs_seen_pkt_ids }
     }
-    pub fn retry(&mut self) { retry::retry(self); }
 
-    pub fn recv_cli(&mut self, buf: &[u8], skt_src: SocketAddr) {
-        recv::cli(self, buf, skt_src);
+    pub fn recv(&mut self, ev: Event) {
+        match ev {
+            Event::Retry => retry::retry(self),
+            Event::Client(buf, skt_src) => recv::cli(self, &buf, skt_src),
+            Event::SimTick => sim::tick(self),
+        }
     }
-
-    pub fn sim_tick(&mut self) { sim::tick(self); }
 }
