@@ -29,7 +29,7 @@ pub struct FreezeWatch {
 
 impl FreezeWatch {
     /// A snapshot was just applied. `t_s` is its time on the local clock.
-    pub fn on_snapshot(&mut self, t_s: f64) {
+    pub fn on_ss(&mut self, t_s: f64) {
         self.newest_ss_s = Some(t_s);
         self.last_ss_at = Some(Instant::now());
         self.stall_logged = false;
@@ -77,7 +77,7 @@ impl FreezeWatch {
         if since_ss_s > GAP_WARN_S && !self.stall_logged {
             self.stall_logged = true;
             logt!(
-                "STALL: no snapshot for {:.0}ms and counting (last frame took {:.0}ms)",
+                "STALL: no ss for {:.0}ms and counting (last frame took {:.0}ms)",
                 since_ss_s * 1000.0,
                 frame_gap_s.unwrap_or(0.0) * 1000.0
             );

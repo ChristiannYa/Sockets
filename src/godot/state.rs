@@ -56,8 +56,8 @@ use godot::prelude::{Gd, GodotClass, PackedByteArray, godot_api};
 use players::PlayerStates;
 use utils::Clock;
 
-/// `[PacketKind::Snapshot, tick_lo, tick_hi]`, followed by the records
-const SNAPSHOT_HEADER_LEN: usize = 3;
+/// `[PacketKind::Ss, tick_lo, tick_hi]`, followed by the records
+const SS_HEADER_LEN: usize = 3;
 
 /// Gap between snapshot arrivals. If longer than this gets logged
 const GAP_WARN_S: f64 = 0.050;
@@ -98,10 +98,9 @@ impl UdpState {
     #[func]
     fn ingest_ss(&mut self, buf: PackedByteArray, arrival_s: f64) -> bool {
         let bytes = buf.as_slice();
-        let (Some([_, lo, hi]), Some(records)) = (
-            bytes.get(..SNAPSHOT_HEADER_LEN),
-            bytes.get(SNAPSHOT_HEADER_LEN..),
-        ) else {
+        let (Some([_, lo, hi]), Some(records)) =
+            (bytes.get(..SS_HEADER_LEN), bytes.get(SS_HEADER_LEN..))
+        else {
             return false;
         };
 
@@ -111,7 +110,7 @@ impl UdpState {
         };
         self.dbg.ss_wtch.track_gap(arrival_s, ss_s);
 
-        self.players.bind_mut().apply_snapshot(records, ss_s);
+        self.players.bind_mut().apply_ss(records, ss_s);
         true
     }
 }

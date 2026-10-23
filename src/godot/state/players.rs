@@ -203,8 +203,8 @@ impl PlayerStates {
     /// poses up on that same clock.
     ///
     /// Malformed records and records without a session id are skipped.
-    pub(super) fn apply_snapshot(&mut self, records_buf: &[u8], t_s: f64) {
-        self.dbg.frzw.on_snapshot(t_s);
+    pub(super) fn apply_ss(&mut self, records_buf: &[u8], t_s: f64) {
+        self.dbg.frzw.on_ss(t_s);
 
         for record in records::split(records_buf) {
             let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)

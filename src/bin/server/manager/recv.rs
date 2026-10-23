@@ -15,6 +15,6 @@ pub fn cli(manager: &mut Manager, buf: &[u8], skt_src: SocketAddr) {
         Ok(PacketKind::Data) => data::recv(manager, skt_src, buf),
         Ok(PacketKind::Ack) => ack::recv(manager, skt_src, buf),
         Ok(PacketKind::Intent) => intent::recv(manager, skt_src, buf),
-        Ok(PacketKind::Snapshot) | Err(()) => {}
+        Ok(PacketKind::Ss) | Err(()) => {}
     }
 }

@@ -65,7 +65,7 @@ impl<'w> WorldPacker<'w> {
         }
     }
 
-    pub fn players_snapshot_pkt(&self, tick_ct: u16) -> Option<Vec<u8>> {
+    pub fn players_ss_pkt(&self, tick_ct: u16) -> Option<Vec<u8>> {
         let loc_qua = qua::loc(self.codec.schema());
 
         let records: Vec<Vec<u8>> = self
@@ -97,7 +97,7 @@ impl<'w> WorldPacker<'w> {
             None
         } else {
             let [lo, hi] = tick_ct.to_le_bytes();
-            let mut buf = self.header(PacketKind::Snapshot, None, [lo, hi]);
+            let mut buf = self.header(PacketKind::Ss, None, [lo, hi]);
             buf.extend(Self::records_buf(records));
             Some(buf)
         }
