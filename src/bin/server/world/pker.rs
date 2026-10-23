@@ -4,7 +4,6 @@ use crate::{
 };
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType},
-    logt,
     pkt::{FieldName, PacketKind},
     qua,
     rel::retx::PendingPacket,
@@ -110,7 +109,7 @@ impl<'w> WorldPacker<'w> {
     /// buffer.
     pub fn set_in_schema_pkt(
         &mut self,
-        sid: u32,
+        _sid: u32,
         reader: &mut BitReader,
         writer: &mut BitWriter,
     ) -> Vec<u8> {
@@ -123,8 +122,6 @@ impl<'w> WorldPacker<'w> {
 
             let val = reader.read(field_name);
             writer.write(field_name, &val);
-
-            logt!("#{sid}: {field_name:?}={val}")
         }
 
         let mut buf =
