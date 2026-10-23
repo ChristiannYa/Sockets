@@ -62,7 +62,7 @@ impl<'a> Step<'a> {
             return;
         }
 
-        self.p.crouching = self.sim_intent.held.crouch;
+        self.p.crouching = self.sim_intent.held.is_crouching;
         let dir = if self.p.crouching { -1.0 } else { 1.0 };
         let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
         self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
@@ -294,7 +294,10 @@ mod tests {
     fn mv_ver_crouch_takes_ten_ticks() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim::<bool> {
-            held: PlayerIntentSimHeld { crouch: true, ..Default::default() },
+            held: PlayerIntentSimHeld {
+                is_crouching: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
 
@@ -315,7 +318,10 @@ mod tests {
     fn mv_ver_crouch_release_regrows() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim::<bool> {
-            held: PlayerIntentSimHeld { crouch: true, ..Default::default() },
+            held: PlayerIntentSimHeld {
+                is_crouching: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
         for _ in 0..15 {
@@ -335,7 +341,10 @@ mod tests {
         p.pos[1] = FLOOR_Y + 5.0;
         p.is_on_floor = false;
         let inp = PlayerIntentSim::<bool> {
-            held: PlayerIntentSimHeld { crouch: true, ..Default::default() },
+            held: PlayerIntentSimHeld {
+                is_crouching: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
 

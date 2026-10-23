@@ -3,7 +3,7 @@ pub struct PlayerIntentSimHeld {
     pub mv_x: f32,
     pub mv_z: f32,
     pub yaw: f32,
-    pub crouch: bool,
+    pub is_crouching: bool,
 }
 
 /// One-shot actions, with one field per event.

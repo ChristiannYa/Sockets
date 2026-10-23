@@ -20,7 +20,7 @@ pub fn encode(
     writer.write(&FieldName::IntentMvZ, &qua::intent::MV.encode(intent.held.mv_z));
     writer.write(&FieldName::IntentYaw, &qua::intent::YAW.encode(intent.held.yaw));
     writer.write(&FieldName::IntentJump, &(intent.edges.jump as u32));
-    writer.write(&FieldName::IntentCrouch, &(intent.held.crouch as u32));
+    writer.write(&FieldName::IntentCrouch, &(intent.held.is_crouching as u32));
 
     let mut pkt = vec![PacketKind::Intent as u8];
     pkt.extend(writer.buf());

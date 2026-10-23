@@ -102,8 +102,8 @@ impl PoseHistory {
 mod tests {
     use super::*;
 
-    fn pose(x: f32, crouch: bool) -> PoseSample {
-        PoseSample { x, y: 0.0, z: 0.0, yaw: 0.0, is_crouching: crouch }
+    fn pose(x: f32, is_crouching: bool) -> PoseSample {
+        PoseSample { x, y: 0.0, z: 0.0, yaw: 0.0, is_crouching }
     }
 
     fn history(items: &[(f64, PoseSample)]) -> PoseHistory {

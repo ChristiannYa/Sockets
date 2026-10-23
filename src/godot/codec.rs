@@ -91,10 +91,10 @@ impl UdpCodec {
         mv_x: f32,
         mv_z: f32,
         yaw: f32,
-        crouch: bool,
+        is_crouching: bool,
         jump_ct: u8,
     ) -> PackedByteArray {
-        let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, crouch };
+        let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, is_crouching };
         let edge_cts = PlayerIntentSimEdges { jump: jump_ct };
         let int = PlayerIntentSim::<u8> { held, edges: edge_cts };
         PackedByteArray::from(intent::encode(&self.schema, seq, &int))

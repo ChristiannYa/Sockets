@@ -28,6 +28,9 @@ pub struct PlayerIntentQueue {
     /// counters aren't 0 can't fire phantom events.
     simed_edge_cts: Option<PlayerIntentSimEdges<u8>>,
 
+    /// @TODO
+    /// Place in a dedicated debug wrapper
+    ///
     /// Ticks in a row where the queue was empty
     dry_ticks: u32,
 }

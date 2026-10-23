@@ -65,7 +65,7 @@ fn decode(
     let jump_ct = reader.read(&FieldName::IntentJump) as u8;
     let crouch = reader.read(&FieldName::IntentCrouch) == 1;
 
-    let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, crouch };
+    let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, is_crouching: crouch };
     let edges = PlayerIntentSimEdges { jump: jump_ct };
     let sim = PlayerIntentSim::<u8> { held, edges };
 
