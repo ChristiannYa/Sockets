@@ -16,9 +16,9 @@ pub enum Event {
 impl Event {
     pub fn name(&self) -> &'static str {
         match self {
-            Event::Client(..) => "Client",
-            Event::Retry => "Retry",
-            Event::SimTick => "SimTick",
+            Event::Client(..) => "client",
+            Event::Retry => "retry",
+            Event::SimTick => "sim_tick",
         }
     }
 }

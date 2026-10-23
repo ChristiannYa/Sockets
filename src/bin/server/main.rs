@@ -54,7 +54,10 @@ fn main() {
         let handle_t = started.elapsed();
         if queue_delay.as_millis() >= 2 || handle_t.as_millis() >= 2 {
             logt!(
-                "slow {ev_name}: queue_delay={queue_delay:?} handle_t={handle_t:?}",
+                "slow {} ev: queue_delay={:?} handle_t={:?}",
+                ev_name,
+                queue_delay,
+                handle_t
             );
         }
     }
