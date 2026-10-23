@@ -25,12 +25,12 @@ pub fn recv(manager: &mut Manager, skt_src: SocketAddr, buf: &[u8]) {
         return;
     };
 
-    let Some((seq, cmd)) = decode(manager, buf) else {
+    let Some((seq, sim)) = decode(manager, buf) else {
         return;
     };
 
     if let Some(player) = manager.world.player_mut_ref(sid) {
-        player.intent_queue.queue(seq, cmd);
+        player.intent_queue.queue(seq, sim);
     }
 }
 
@@ -67,7 +67,7 @@ fn decode(
 
     let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, crouch };
     let edges = PlayerIntentSimEdges { jump: jump_ct };
-    let cmd = PlayerIntentSim::<u8> { held, edges };
+    let sim = PlayerIntentSim::<u8> { held, edges };
 
-    Some((seq, cmd))
+    Some((seq, sim))
 }

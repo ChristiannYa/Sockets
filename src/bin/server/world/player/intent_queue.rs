@@ -44,7 +44,7 @@ impl PlayerIntentQueue {
         }
     }
 
-    pub fn queue(&mut self, seq: Seq, cmd: PlayerIntentSim<u8>) {
+    pub fn queue(&mut self, seq: Seq, sim: PlayerIntentSim<u8>) {
         if self
             .latest_seq
             .is_some_and(|latest| !seq.is_newer_than(latest))
@@ -56,7 +56,7 @@ impl PlayerIntentQueue {
         if self.queue.len() >= QUEUE_MAX {
             self.queue.pop_front();
         }
-        self.queue.push_back((seq, cmd));
+        self.queue.push_back((seq, sim));
     }
 
     /// Pops the next queued intent for this tick and returns it.
@@ -64,7 +64,7 @@ impl PlayerIntentQueue {
     /// reset so a lost packet can't retrigger them
     pub fn next(&mut self) -> PlayerIntentSim<bool> {
         match self.queue.pop_front() {
-            Some((simed_seq, cmd)) => {
+            Some((seq, int)) => {
                 if self.dry_ticks >= DRY_WARN_TICKS {
                     logt!(
                         "intents flowing again after {} dry ticks",
@@ -74,14 +74,14 @@ impl PlayerIntentQueue {
                 self.dry_ticks = 0;
 
                 let edges = match self.simed_edge_cts {
-                    Some(prev) => edges::diffs(cmd.edges, prev),
+                    Some(prev) => edges::diffs(int.edges, prev),
                     None => PlayerIntentSimEdges::default(),
                 };
-                self.simed_edge_cts = Some(cmd.edges);
+                self.simed_edge_cts = Some(int.edges);
 
-                self.simed_seq = simed_seq;
+                self.simed_seq = seq;
                 self.last_sim =
-                    PlayerIntentSim::<bool> { held: cmd.held, edges };
+                    PlayerIntentSim::<bool> { held: int.held, edges };
             }
             None => {
                 self.dry_ticks += 1;
@@ -103,7 +103,7 @@ mod tests {
     use super::*;
     use bitp::sim::PlayerIntentSimHeld;
 
-    fn cmd(jump_ct: u8) -> PlayerIntentSim<u8> {
+    fn sim(jump_ct: u8) -> PlayerIntentSim<u8> {
         PlayerIntentSim::<u8> {
             held: PlayerIntentSimHeld::default(),
             edges: PlayerIntentSimEdges { jump: jump_ct },
@@ -114,8 +114,8 @@ mod tests {
     fn first_intent_only_seeds() {
         let mut q = PlayerIntentQueue::new();
         // Not 0 on purpose: a joiner's counter can start anywhere
-        q.queue(Seq(0), cmd(5));
-        q.queue(Seq(1), cmd(5));
+        q.queue(Seq(0), sim(5));
+        q.queue(Seq(1), sim(5));
 
         assert!(!q.next().edges.jump);
         assert!(!q.next().edges.jump);
@@ -124,9 +124,9 @@ mod tests {
     #[test]
     fn counter_change_fires_once() {
         let mut q = PlayerIntentQueue::new();
-        q.queue(Seq(0), cmd(1));
-        q.queue(Seq(1), cmd(2));
-        q.queue(Seq(2), cmd(2));
+        q.queue(Seq(0), sim(1));
+        q.queue(Seq(1), sim(2));
+        q.queue(Seq(2), sim(2));
 
         let jumps: Vec<bool> = (0..3).map(|_| q.next().edges.jump).collect();
         assert_eq!(jumps, [false, true, false]);
