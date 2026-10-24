@@ -13,13 +13,12 @@ use std::collections::HashMap;
 
 pub type PlayersHM = HashMap<u32, Player>;
 
+#[derive(Default)]
 pub struct Players {
     hm: PlayersHM,
 }
 
 impl Players {
-    pub fn new() -> Self { Players { hm: HashMap::new() } }
-
     pub fn iter(&self) -> impl Iterator<Item = (&u32, &Player)> {
         self.hm.iter()
     }
@@ -33,10 +32,6 @@ impl Players {
     }
 
     pub fn sim_tick(&mut self) { world::sim::players::tick(&mut self.hm); }
-}
-
-impl Default for Players {
-    fn default() -> Self { Self::new() }
 }
 
 pub struct Player {
