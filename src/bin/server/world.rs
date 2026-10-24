@@ -30,13 +30,12 @@ impl<'w> World<'w> {
         World { codec, players: Players::default(), tick_ct: 0 }
     }
 
-    /// Advances the simulation by 1 tick
-    pub fn tick(&mut self) {
+    /// Advances the simulation by 1 tick and returns the increased tick count
+    pub fn tick(&mut self) -> u16 {
         self.tick_ct = self.tick_ct.wrapping_add(1);
         self.players.sim_tick();
+        self.tick_ct
     }
-
-    pub fn tick_ct(&self) -> u16 { self.tick_ct }
 
     pub fn player_mut_ref(&mut self, sid: u32) -> Option<&mut Player> {
         self.players.by_sid_mut_ref(sid)
