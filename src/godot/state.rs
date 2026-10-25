@@ -143,4 +143,8 @@ impl UdpState {
 
         true
     }
+
+    /// The moment in the past that should be on screen right now
+    #[func]
+    fn render_t(&self, now_s: f64) -> f64 { now_s - RENDER_DELAY_S }
 }
