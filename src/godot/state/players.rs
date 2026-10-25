@@ -33,9 +33,9 @@ struct PlayerState {
 }
 
 impl PlayerState {
-    fn new(history_cap: usize) -> Self {
+    fn new() -> Self {
         PlayerState {
-            pose: PoseTrack::new(history_cap),
+            pose: PoseTrack::new(),
             color: RawColor::default(),
             last_seq: None,
         }
@@ -68,7 +68,6 @@ impl PlayerState {
 #[class(base = RefCounted, no_init)]
 pub struct PlayerStates {
     schema: PacketSchema,
-    history_cap: usize,
     players: HashMap<u32, PlayerState>,
     my_sid: Option<u32>,
     dbg: PlayersStateDbg,
@@ -79,10 +78,9 @@ impl PlayerStates {
     #[constant]
     const POSE_STRIDE: i64 = POSE_STRIDE as i64;
 
-    pub fn new(schema: PacketSchema, history_cap: usize) -> Self {
+    pub fn new(schema: PacketSchema) -> Self {
         PlayerStates {
             schema,
-            history_cap,
             players: HashMap::new(),
             my_sid: None,
             dbg: PlayersStateDbg::default(),
@@ -184,10 +182,7 @@ impl PlayerStates {
             self.my_sid = Some(sid)
         }
 
-        let player = self
-            .players
-            .entry(sid)
-            .or_insert_with(|| PlayerState::new(self.history_cap));
+        let player = self.players.entry(sid).or_insert_with(PlayerState::new);
 
         if !player.apply_seq(delta.seq) {
             return;
@@ -212,10 +207,8 @@ impl PlayerStates {
                 continue;
             };
 
-            let player = self
-                .players
-                .entry(sid)
-                .or_insert_with(|| PlayerState::new(self.history_cap));
+            let player =
+                self.players.entry(sid).or_insert_with(PlayerState::new);
 
             player.pose.apply(&delta.pose, &self.schema, t_s);
         }

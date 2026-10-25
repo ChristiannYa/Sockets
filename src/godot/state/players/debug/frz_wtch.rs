@@ -1,13 +1,13 @@
 //! Debug logging for freezes: notices when snapshots stop arriving. Nothing
 //! here changes what the game sees.
 
-use super::super::GAP_WARN_S;
-use crate::logt;
+use super::GAP_WARN_S;
+use crate::{logt, sim::consts::SS_INTV_S};
 use std::time::Instant;
 
 /// How far the render time must be past the newest snapshot to count as a
-/// freeze (~1 server tick)
-const FREEZE_MIN_S: f64 = 0.020;
+/// freeze (~1 snapshot interval): 20ms at 60hz, 60ms at 20hz
+const FREEZE_MIN_S: f64 = 1.2 * SS_INTV_S;
 
 #[derive(Default)]
 pub struct FreezeWatch {

@@ -1,7 +1,6 @@
 //! Puts the server's snapshot ticks on the local clock.
 
-/// Seconds between two server ticks
-const TICK_DT: f64 = 1.0 / 60.0;
+use crate::sim::consts::TICK_DT_F64;
 
 pub struct Clock {
     /// Newest tick seen, counted past the 2-byte wrap. `None` until the first
@@ -36,18 +35,19 @@ impl Clock {
 
         // A late packet makes the estimate larger, so only the lowest one is
         // kept
-        let est = arrival_s - tick as f64 * TICK_DT;
+
+        let est = arrival_s - tick as f64 * TICK_DT_F64;
         self.offset =
             if self.tick.is_none() { est } else { self.offset.min(est) };
         self.tick = Some(tick);
 
-        Some(tick as f64 * TICK_DT + self.offset)
+        Some(tick as f64 * TICK_DT_F64 + self.offset)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Clock, TICK_DT};
+    use super::{Clock, TICK_DT_F64};
 
     #[test]
     fn first_snapshot_is_accepted() {
@@ -68,8 +68,8 @@ mod tests {
     fn counts_past_the_wrap() {
         let mut c = Clock::new();
         let a = c.accept(65535, 100.0).unwrap();
-        let b = c.accept(0, 100.0 + TICK_DT).unwrap();
-        assert!((b - a - TICK_DT).abs() < 1e-9);
+        let b = c.accept(0, 100.0 + TICK_DT_F64).unwrap();
+        assert!((b - a - TICK_DT_F64).abs() < 1e-9);
     }
 
     #[test]
@@ -77,7 +77,7 @@ mod tests {
         let mut c = Clock::new();
         c.accept(0, 10.0);
         // arrives 50 ms later than its tick says
-        let t = c.accept(1, 10.0 + TICK_DT + 0.05).unwrap();
-        assert!((t - (10.0 + TICK_DT)).abs() < 1e-9);
+        let t = c.accept(1, 10.0 + TICK_DT_F64 + 0.05).unwrap();
+        assert!((t - (10.0 + TICK_DT_F64)).abs() < 1e-9);
     }
 }

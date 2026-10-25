@@ -1,7 +1,7 @@
 use crate::sim::{
     consts::{
         CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT,
-        JUMP_VEL, SPEED, TICK_DT,
+        JUMP_VEL, SPEED, TICK_DT_F32,
     },
     intent::PlayerIntentSim,
     state::PlayerState,
@@ -32,7 +32,7 @@ impl<'a> Step<'a> {
         self.temp_floor();
     }
 
-    fn apply_gravity(&mut self) { self.p.vel[1] -= GRAVITY * TICK_DT; }
+    fn apply_gravity(&mut self) { self.p.vel[1] -= GRAVITY * TICK_DT_F32; }
 
     fn mv_hor_vel(&mut self) {
         let (x, z) = wish_dir(
@@ -44,8 +44,10 @@ impl<'a> Step<'a> {
             self.p.vel[0] = x * SPEED;
             self.p.vel[2] = z * SPEED;
         } else {
-            self.p.vel[0] = move_toward(self.p.vel[0], 0.0, DECC * TICK_DT);
-            self.p.vel[2] = move_toward(self.p.vel[2], 0.0, DECC * TICK_DT);
+            self.p.vel[0] =
+                move_toward(self.p.vel[0], 0.0, DECC * TICK_DT_F32);
+            self.p.vel[2] =
+                move_toward(self.p.vel[2], 0.0, DECC * TICK_DT_F32);
         }
     }
 
@@ -64,14 +66,14 @@ impl<'a> Step<'a> {
 
         self.p.crouching = self.sim_intent.held.is_crouching;
         let dir = if self.p.crouching { -1.0 } else { 1.0 };
-        let h = self.p.height + dir * CROUCH_SPEED * TICK_DT;
+        let h = self.p.height + dir * CROUCH_SPEED * TICK_DT_F32;
         self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
     }
 
     fn integrate(&mut self) {
-        self.p.pos[0] += self.p.vel[0] * TICK_DT;
-        self.p.pos[1] += self.p.vel[1] * TICK_DT;
-        self.p.pos[2] += self.p.vel[2] * TICK_DT;
+        self.p.pos[0] += self.p.vel[0] * TICK_DT_F32;
+        self.p.pos[1] += self.p.vel[1] * TICK_DT_F32;
+        self.p.pos[2] += self.p.vel[2] * TICK_DT_F32;
     }
 
     fn temp_floor(&mut self) {
@@ -157,7 +159,7 @@ mod tests {
         Step::new(&mut p, &inp).run();
 
         assert!(approx(p.vel[2], -6.0));
-        assert!(approx(p.pos[2], -6.0 * TICK_DT));
+        assert!(approx(p.pos[2], -6.0 * TICK_DT_F32));
     }
 
     #[test]

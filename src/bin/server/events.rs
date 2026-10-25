@@ -1,11 +1,10 @@
+use bitp::{logt, sim::consts::SIM_HZ};
 use std::{
     net::{SocketAddr, UdpSocket},
     sync::mpsc::{self, Receiver},
     thread,
     time::{Duration, Instant},
 };
-
-use bitp::logt;
 
 pub enum Event {
     Client(Vec<u8>, SocketAddr),
@@ -24,7 +23,20 @@ impl Event {
 }
 
 const RETRY_CHECK_INTV: Duration = Duration::from_millis(20);
-const SIM_TICK_INTV: Duration = Duration::from_micros(16_667);
+
+/// [`Duration::from_micros`] works, but since we're deriving from [SIM_HZ],
+/// integer division throws away the remainder, and the unit decides how much
+/// it is thrown away:
+///
+/// - *Microseconds*: `1_000_000 / 60` gives 16,666 µs and drops 0.67 µs per
+///   tick. Over an hour adds up to ~0.14s of drift against an exact 60hz
+/// - *Nanoseconds*: `1_000_000_000 / 60` gives 16,666,666 ns and drops 0.67s
+///   per tick. Over an hour adds up to ~0.14ms of drift against an exact 60hz
+///
+/// Both small for gameplay, so micros could be used, but nanos are more
+/// accurate for free.
+const SIM_TICK_INTV: Duration =
+    Duration::from_nanos(1_000_000_000 / SIM_HZ as u64);
 
 /// Spawns the receive, sim tick, and retry interval threads, returning a
 /// channel that yields [Event] for the main thread to consume

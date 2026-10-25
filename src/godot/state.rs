@@ -50,17 +50,47 @@ mod dbg;
 mod players;
 mod utils;
 
-use crate::{bits::PacketSchema, pkt::FIELD_LENGTHS};
+use crate::{bits::PacketSchema, pkt::FIELD_LENGTHS, sim::consts::SS_INTV_S};
 use dbg::StateDebug;
 use godot::prelude::{Gd, GodotClass, PackedByteArray, godot_api};
 use players::PlayerStates;
+use tap::Pipe;
 use utils::Clock;
 
 /// `[PacketKind::Ss, tick_lo, tick_hi]`, followed by the records
 const SS_HEADER_LEN: usize = 3;
 
-/// Gap between snapshot arrivals. If longer than this gets logged
-const GAP_WARN_S: f64 = 0.050;
+/// Extra lag added on purpose so jitter does not starve interpolation,
+/// causing player freezes.
+///
+/// Time-based: jitter in ms doesn't depend on the snapshot rate. Needs to
+/// stay >= ~2 snapshot intervals, one is for the regular interval and the
+/// second is so that losing a single snapshot doesn't starve the
+/// interpolation.
+///
+/// Drawing at `T = now - delay` needs the snapshot right AFTER `T` to have
+/// arrived by `now`. If it hasn't, there's nothing to interpolate toward
+/// ("starved") and the player freezes at its last pose:
+///
+/// ```text
+/// S5 arrived:   S4 ------ S5 ------ S6
+///                  ^T     ^ interpolate S4 -> S5, smooth
+///
+/// S5 lost:      S4 ------ S5 ------ S6
+///                  ^T     X         ^ the next "after" snapshot is 2
+///                                     intervals past T and must arrive by
+///                                     `now`, else: starved, freeze
+/// ```
+const RENDER_DELAY_S: f64 = 0.100;
+const _: () = assert!(
+    RENDER_DELAY_S >= 2.0 * SS_INTV_S,
+    "render delay must be at least 2 snapshot intervals"
+);
+
+/// Gap between snapshot arrivals. If longer than this gets logged.
+/// 3 snapshot intervals, so about 2 missing snapshots: 50ms at 60hz, 150ms at
+/// 20hz
+const GAP_WARN_S: f64 = 3.0 * SS_INTV_S;
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
@@ -73,16 +103,13 @@ pub struct UdpState {
 #[godot_api]
 impl UdpState {
     #[func]
-    fn create(history_cap: i64) -> Gd<Self> {
-        let clock = Clock::new();
-
+    fn create() -> Gd<Self> {
         let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
-        let cap = history_cap.max(2) as usize;
-        let players = Gd::from_object(PlayerStates::new(schema, cap));
+        let players = Gd::from_object(PlayerStates::new(schema));
 
         Gd::from_init_fn(|_| Self {
             players,
-            clock,
+            clock: Clock::new(),
             dbg: StateDebug::default(),
         })
     }
@@ -97,20 +124,23 @@ impl UdpState {
     /// or a reordered packet).
     #[func]
     fn ingest_ss(&mut self, buf: PackedByteArray, arrival_s: f64) -> bool {
-        let bytes = buf.as_slice();
-        let (Some([_, lo, hi]), Some(records)) =
-            (bytes.get(..SS_HEADER_LEN), bytes.get(SS_HEADER_LEN..))
+        let (Some([_, lo, hi]), Some(records)) = buf
+            .as_slice()
+            .pipe(|b| (b.get(..SS_HEADER_LEN), b.get(SS_HEADER_LEN..)))
         else {
             return false;
         };
 
-        let tick = u16::from_le_bytes([*lo, *hi]);
-        let Some(ss_s) = self.clock.accept(tick, arrival_s) else {
+        let Some(ss_s) = self
+            .clock
+            .accept(u16::from_le_bytes([*lo, *hi]), arrival_s)
+        else {
             return false;
         };
-        self.dbg.ss_wtch.track_gap(arrival_s, ss_s);
 
+        self.dbg.ss_wtch.track_gap(arrival_s, ss_s);
         self.players.bind_mut().apply_ss(records, ss_s);
+
         true
     }
 }
