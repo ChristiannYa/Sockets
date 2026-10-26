@@ -2,15 +2,10 @@ mod pker;
 pub mod player;
 mod sim;
 
-use crate::{
-    codec::Codec,
-    rel::retx::PendingPackets,
-    world::{
-        pker::WorldPacker,
-        player::{Player, Players},
-    },
-};
+use crate::{codec::Codec, rel::retx::PendingPackets};
 use bitp::sim::consts::SS_EVERY_TICKS;
+use pker::WorldPacker;
+use player::{Player, Players};
 use std::net::SocketAddr;
 
 /// Who to send to and where to track it

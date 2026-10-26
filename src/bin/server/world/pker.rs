@@ -7,7 +7,6 @@ use bitp::{
     pkt::{FieldName, PacketKind},
     qua,
     rel::retx::PendingPacket,
-    sim::PlayerState,
 };
 use std::time::Instant;
 use tap::Pipe;
@@ -194,7 +193,7 @@ impl Player {
         &self,
         schema: &PacketSchema,
     ) -> [(FieldName, u32); 5] {
-        let s: &PlayerState = &self.state;
+        let s = &self.state;
 
         let loc_qua = qua::loc(schema);
         let y_qua = qua::intent::Y;

@@ -1,7 +1,7 @@
 mod edges;
 mod intent_queue;
 
-use crate::world::{self, player::intent_queue::PlayerIntentQueue};
+use super::{player::intent_queue::PlayerIntentQueue, sim};
 use bitp::{
     bits::PacketSchema,
     pkt::FieldName,
@@ -31,7 +31,7 @@ impl Players {
         self.hm.insert(sid, player);
     }
 
-    pub fn sim_tick(&mut self) { world::sim::players::tick(&mut self.hm); }
+    pub fn sim_tick(&mut self) { sim::players::tick(&mut self.hm); }
 }
 
 pub struct Player {

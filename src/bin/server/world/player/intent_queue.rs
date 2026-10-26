@@ -1,6 +1,6 @@
 mod debug;
 
-use crate::world::player::edges;
+use super::edges;
 use bitp::{
     pkt::Seq,
     sim::{PlayerIntentSim, PlayerIntentSimEdges},
