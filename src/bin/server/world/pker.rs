@@ -1,12 +1,13 @@
 use crate::{
     codec::{Codec, FieldsPack, Rel},
-    world::{RelTarget, player::Players},
+    world::{Player, RelTarget, player::Players},
 };
 use bitp::{
-    bits::{BitReader, BitWriter, DecodeType},
+    bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     pkt::{FieldName, PacketKind},
     qua,
     rel::retx::PendingPacket,
+    sim::PlayerState,
 };
 use std::time::Instant;
 use tap::Pipe;
@@ -30,14 +31,31 @@ impl<'w> WorldPacker<'w> {
         pkt
     }
 
+    pub fn players_ss_pkt(&self, tick_ct: u16) -> Vec<u8> {
+        let records: Vec<Vec<u8>> = self
+            .players
+            .iter()
+            .map(|(sid, player)| {
+                self.pk(FieldsPack {
+                    id: None,
+                    fields: &player.encode_int_fields(self.codec.schema()),
+                    sid: *sid,
+                })
+            })
+            .collect();
+
+        let [lo, hi] = tick_ct.to_le_bytes();
+        let mut buf = self.header(PacketKind::Ss, None, [lo, hi]);
+        buf.extend(Self::records_buf(records));
+        buf
+    }
+
     /// @TODO
     /// Make this a reliable packet
     ///
     /// Returns a packet containing all the player's metadata (non-intent data),
     /// excluding `sid`
-    pub fn meta_pkt(&self, sid: u32) -> Option<Vec<u8>> {
-        let hsv_qua = qua::hsv(self.codec.schema());
-
+    pub fn players_meta_pkt(&self, sid: u32) -> Vec<u8> {
         let records: Vec<Vec<u8>> = self
             .players
             .iter()
@@ -45,62 +63,16 @@ impl<'w> WorldPacker<'w> {
             .map(|(sid, p)| {
                 self.pk(FieldsPack {
                     id: None,
-                    fields: &[
-                        (FieldName::ColorH, hsv_qua.h.encode(p.color.h)),
-                        (FieldName::ColorS, hsv_qua.s.encode(p.color.s)),
-                        (FieldName::ColorV, hsv_qua.v.encode(p.color.v)),
-                    ],
+                    fields: &p.encode_meta_fields(self.codec.schema()),
                     sid: *sid,
                 })
             })
             .collect();
 
-        if records.is_empty() {
-            None
-        } else {
-            let mut buf =
-                self.header(PacketKind::Data, Some(DecodeType::Batch), None);
-            buf.extend(Self::records_buf(records));
-            Some(buf)
-        }
-    }
-
-    pub fn players_ss_pkt(&self, tick_ct: u16) -> Option<Vec<u8>> {
-        let loc_qua = qua::loc(self.codec.schema());
-
-        let records: Vec<Vec<u8>> = self
-            .players
-            .iter()
-            .map(|(sid, player)| {
-                let [x, y, z] = player.state.pos;
-                self.pk(FieldsPack {
-                    id: None,
-                    fields: &[
-                        (FieldName::LocationX, loc_qua.x.encode(x)),
-                        (FieldName::LocationZ, loc_qua.z.encode(z)),
-                        (FieldName::LocationY, qua::intent::Y.encode(y)),
-                        (
-                            FieldName::Yaw,
-                            qua::intent::YAW.encode(player.state.yaw),
-                        ),
-                        (
-                            FieldName::IsCrouching,
-                            player.state.crouching as u32,
-                        ),
-                    ],
-                    sid: *sid,
-                })
-            })
-            .collect();
-
-        if records.is_empty() {
-            None
-        } else {
-            let [lo, hi] = tick_ct.to_le_bytes();
-            let mut buf = self.header(PacketKind::Ss, None, [lo, hi]);
-            buf.extend(Self::records_buf(records));
-            Some(buf)
-        }
+        let mut buf =
+            self.header(PacketKind::Data, Some(DecodeType::Batch), None);
+        buf.extend(Self::records_buf(records));
+        buf
     }
 
     /// Reads every set schema field, writing each one into the writer's
@@ -214,5 +186,41 @@ impl<'w> WorldPacker<'w> {
             buf.extend(record);
         }
         buf
+    }
+}
+
+impl Player {
+    fn encode_int_fields(
+        &self,
+        schema: &PacketSchema,
+    ) -> [(FieldName, u32); 5] {
+        let s: &PlayerState = &self.state;
+
+        let loc_qua = qua::loc(schema);
+        let y_qua = qua::intent::Y;
+        let yaw_qua = qua::intent::YAW;
+
+        [
+            (FieldName::LocationX, loc_qua.x.encode(s.pos[0])),
+            (FieldName::LocationZ, loc_qua.z.encode(s.pos[2])),
+            (FieldName::LocationY, y_qua.encode(s.pos[1])),
+            (FieldName::Yaw, yaw_qua.encode(s.yaw)),
+            (FieldName::IsCrouching, s.crouching as u32),
+        ]
+    }
+
+    fn encode_meta_fields(
+        &self,
+        schema: &PacketSchema,
+    ) -> [(FieldName, u32); 3] {
+        let c = &self.color;
+
+        let hsv_qua = qua::hsv(schema);
+
+        [
+            (FieldName::ColorH, hsv_qua.h.encode(c.h)),
+            (FieldName::ColorS, hsv_qua.s.encode(c.s)),
+            (FieldName::ColorV, hsv_qua.v.encode(c.v)),
+        ]
     }
 }

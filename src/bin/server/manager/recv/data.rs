@@ -56,9 +56,9 @@ fn spawn_new_cli(manager: &mut Manager, sid: u32, skt_src: &SocketAddr) {
         manager.pending_pkts,
     );
 
-    if let Some(sync_buf) = manager.world.pker().meta_pkt(sid) {
-        manager.net.send_to(&sync_buf, *skt_src);
-    }
+    manager
+        .net
+        .send_to(&manager.world.pker().players_meta_pkt(sid), *skt_src)
 }
 
 /// Returns `true` if the packet is a duplicate that the caller should drop.
