@@ -37,7 +37,7 @@ impl<'w> WorldPacker<'w> {
             .map(|(sid, player)| {
                 self.pk(FieldsPack {
                     id: None,
-                    fields: &player.encode_int_fields(self.codec.schema()),
+                    fields: &player.encode_int_fields(),
                     sid: *sid,
                 })
             })
@@ -188,13 +188,10 @@ impl<'w> WorldPacker<'w> {
 }
 
 impl Player {
-    fn encode_int_fields(
-        &self,
-        schema: &PacketSchema,
-    ) -> [(FieldName, u32); 5] {
+    fn encode_int_fields(&self) -> [(FieldName, u32); 5] {
         let s = &self.state;
 
-        let loc_qua = qua::player::loc(schema);
+        let loc_qua = qua::player::loc();
         let y_qua = qua::player::intent::Y;
         let yaw_qua = qua::player::intent::YAW;
 

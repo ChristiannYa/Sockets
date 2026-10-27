@@ -151,9 +151,7 @@ impl PlayerStates {
     fn color(&self, sid: i64) -> PackedFloat32Array {
         u32::try_from(sid)
             .ok()
-            .and_then(|sid| {
-                self.players.get(&sid)?.color.decode(&self.schema)
-            })
+            .and_then(|sid| self.players.get(&sid)?.color.decode(&self.schema))
             .map(|c| PackedFloat32Array::from(&[c.h, c.s, c.v][..]))
             .unwrap_or_default()
     }
@@ -210,7 +208,7 @@ impl PlayerStates {
             let player =
                 self.players.entry(sid).or_insert_with(PlayerState::new);
 
-            player.pose.apply(&delta.pose, &self.schema, t_s);
+            player.pose.apply(&delta.pose, t_s);
         }
     }
 }

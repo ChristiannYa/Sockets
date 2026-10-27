@@ -1,5 +1,5 @@
 use super::super::pose::PoseSample;
-use crate::{bits::PacketSchema, pkt::FieldName, qua};
+use crate::{pkt::FieldName, qua};
 
 #[derive(Default)]
 pub struct RawPose {
@@ -30,8 +30,8 @@ impl RawPose {
         self.is_crouching = new.is_crouching.or(self.is_crouching);
     }
 
-    pub fn decode(&self, schema: &PacketSchema) -> Option<PoseSample> {
-        let loc = qua::player::loc(schema);
+    pub fn decode(&self) -> Option<PoseSample> {
+        let loc = qua::player::loc();
         Some(PoseSample {
             x: loc.x.decode(self.x?),
             y: qua::player::intent::Y.decode(self.y?),
