@@ -15,19 +15,51 @@ pub struct PlayerIntentSimHeld {
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct PlayerIntentSimEdges<T> {
     pub jump: T,
-    // pub shot: T,
+    // pub melee: T,
 }
 
 impl PlayerIntentSimEdges<u8> {
-    /// Which counters differ between these edges and the previous ones.
+    /// Which counters differ between these edges (the current ones) and
+    /// `prev` (the ones simulated before).
     ///
     /// Wraping needs no special case because any difference counts (7 -> 0
     /// included)
     pub fn diffs(
         &self,
-        new: PlayerIntentSimEdges<u8>,
+        prev: PlayerIntentSimEdges<u8>,
     ) -> PlayerIntentSimEdges<bool> {
-        PlayerIntentSimEdges { jump: self.jump != new.jump }
+        PlayerIntentSimEdges {
+            jump: self.jump != prev.jump,
+            // melee: self.melee != prev.melee
+        }
+    }
+
+    /// Edges fired by `self`, given the counters simulated before it.
+    /// With no previous counters (the first intent) nothing fires, because
+    /// the first intent only seeds them.
+    ///
+    /// The server and the client's replay both call this, with the counters
+    /// of the intent simulated right before `self`. They can still disagree
+    /// when an intent is lost. The server only sees intents that arrived, so
+    /// a lost intent is skipped and its counter change firess on the next one
+    /// that arrives. The client has every intent it sent, so its replay fires
+    /// on the intent where the counter changed. The jump lands later on the
+    /// server than the replay: a small, honest misprediction.
+    ///
+    /// ```text
+    /// client sent:           #4 jump=1   #5 jump=2   #6 jump=2
+    /// server received:       #4          (lost)      #6
+    /// server fires on:                               #6 (2 != 1)
+    /// client replay fires on:            #5
+    /// ```
+    pub fn fired(
+        &self,
+        prev: Option<PlayerIntentSimEdges<u8>>,
+    ) -> PlayerIntentSimEdges<bool> {
+        match prev {
+            Some(prev) => self.diffs(prev),
+            None => PlayerIntentSimEdges::default(),
+        }
     }
 }
 
@@ -35,7 +67,7 @@ impl PlayerIntentSimEdges<u8> {
 /// one-shot actions they performed (`edges`).
 ///
 /// It is generic over how the edges are represented, so "held + edges" is
-/// declared once and exists in two forms that wont't drift apart:
+/// declared once and exists in two forms that won't drift apart:
 ///
 /// - `T<u8>`: what arrives from the client. Each edge is a
 ///   wrapping counter, which survives packet loss
@@ -43,8 +75,9 @@ impl PlayerIntentSimEdges<u8> {
 /// - `T<bool>`: what [crate::sim::step::Step] consumes. Each edge is "fired
 ///   this tick", derived by comparing a counter with the previous one.
 ///
-/// [PlayerIntent::held_only] exists only for `bool`, because a counter has no
-/// "reset" (repeating it is what keeps the client's presses from being lost).
+/// [PlayerIntentSim::held_only] exists only for `bool`, because a counter has
+/// no "reset" (repeating it is what keeps the client's presses from being
+/// lost).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PlayerIntentSim<T> {
     pub held: PlayerIntentSimHeld,

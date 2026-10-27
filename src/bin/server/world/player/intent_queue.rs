@@ -64,11 +64,7 @@ impl PlayerIntentQueue {
             Some((seq, int)) => {
                 self.dbg.on_queue_found();
 
-                let edges = match self.simed_edge_cts {
-                    Some(prev) => int.edges.diffs(prev),
-                    None => PlayerIntentSimEdges::default(),
-                };
-
+                let edges = int.edges.fired(self.simed_edge_cts);
                 self.simed_edge_cts = Some(int.edges);
                 self.simed_seq = seq;
                 self.last_sim =
