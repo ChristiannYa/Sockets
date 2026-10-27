@@ -13,12 +13,7 @@ pub struct BitReader<'s, 'b> {
 impl<'s, 'b> BitReader<'s, 'b> {
     pub fn new(pkt_schema: &'s PacketSchema, buf: &'b [u8]) -> Self {
         let (buf_mask, buf) = buf.split_at(pkt_schema.mask_len());
-        BitReader {
-            packet_schema: pkt_schema,
-            buf,
-            buf_mask,
-            bits_acc: 0,
-        }
+        BitReader { packet_schema: pkt_schema, buf, buf_mask, bits_acc: 0 }
     }
 
     pub fn read(&mut self, field_name: &FieldName) -> u32 {
@@ -242,8 +237,8 @@ mod tests {
 
         // Same fields, same order as the server's spawn packet
         let field_values = [
-            (FieldName::DevSessionId, 0),
-            (FieldName::DevPacketId, 0),
+            (FieldName::DevSid, 0),
+            (FieldName::DevPktId, 0),
             (FieldName::LocationX, 1008),
             (FieldName::LocationZ, 1089),
             (FieldName::ColorH, 45),

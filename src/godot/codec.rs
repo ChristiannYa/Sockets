@@ -57,10 +57,8 @@ impl UdpCodec {
             // Read every set field, even the ones skipped below, to keep the
             // reader's bit cursor in sync
             let val = reader.read(field_name);
-            let is_dev = matches!(
-                field_name,
-                FieldName::DevSessionId | FieldName::DevPacketId
-            );
+            let is_dev =
+                matches!(field_name, FieldName::DevSid | FieldName::DevPktId);
             if is_dev {
                 dict.set(format!("{field_name:?}"), val);
             }

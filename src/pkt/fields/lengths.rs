@@ -1,10 +1,10 @@
 use crate::pkt::FieldName;
 
 pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
-    (FieldName::DevSessionId, 6),
-    (FieldName::DevSequence, 8),
+    (FieldName::DevSid, 6),
+    (FieldName::DevSeq, 8),
     (FieldName::DevPing, 1),
-    (FieldName::DevPacketId, 8),
+    (FieldName::DevPktId, 8),
     (FieldName::DevImNew, 1),
     (FieldName::IntentSeq, 8),
     (FieldName::IntentMvX, 6),

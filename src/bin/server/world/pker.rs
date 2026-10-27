@@ -22,7 +22,7 @@ impl<'w> WorldPacker<'w> {
     }
 
     /// Returns a reliable packet with the [FieldName::DevImNew] flag
-    /// Information: [DecodeType::Single], [FieldName::DevSessionId] and
+    /// Information: [DecodeType::Single], [FieldName::DevSid] and
     /// [FieldName::DevImNew]
     pub fn welcome_pkt(&self, rel_target: &mut RelTarget) -> Vec<u8> {
         let (pkt, _) =
@@ -85,8 +85,7 @@ impl<'w> WorldPacker<'w> {
         writer: &mut BitWriter,
     ) -> Vec<u8> {
         for (field_name, _) in self.codec.schema().fields.iter() {
-            if !reader.isset(field_name)
-                || *field_name == FieldName::DevPacketId
+            if !reader.isset(field_name) || *field_name == FieldName::DevPktId
             {
                 continue;
             };

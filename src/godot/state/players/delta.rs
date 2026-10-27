@@ -33,8 +33,8 @@ impl PlayerDelta {
             }
             let val = reader.read(name);
             match name {
-                FieldName::DevSessionId => sid = Some(val),
-                FieldName::DevSequence => delta.seq = Some(Seq(val as u8)),
+                FieldName::DevSid => sid = Some(val),
+                FieldName::DevSeq => delta.seq = Some(Seq(val as u8)),
                 FieldName::DevImNew => delta.is_new = val == 1,
                 _ => {
                     delta.pose.set(name, val);

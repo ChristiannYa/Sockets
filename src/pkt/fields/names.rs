@@ -1,9 +1,10 @@
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum FieldName {
-    DevSessionId,
-    DevSequence,
+    DevSid,
+    DevSeq,
+    DevSimedSeq,
     DevPing,
-    DevPacketId,
+    DevPktId,
     DevImNew,
     IntentSeq,
     IntentMvX,
@@ -20,6 +21,7 @@ pub enum FieldName {
     LocationZ,
     LocationY,
     Yaw,
+    VelY,
     ColorH,
     ColorS,
     ColorV,

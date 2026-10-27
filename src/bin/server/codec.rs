@@ -26,8 +26,7 @@ pub struct Codec {
 
 impl Codec {
     pub fn new() -> Self {
-        let schema: PacketSchema =
-            PacketSchema::build(FIELD_LENGTHS).unwrap();
+        let schema: PacketSchema = PacketSchema::build(FIELD_LENGTHS).unwrap();
 
         Codec { schema, next_pkt_id: Cell::new(0) }
     }
@@ -51,24 +50,20 @@ impl Codec {
         reader: &mut BitReader,
     ) -> (Option<u8>, Option<u8>) {
         let inid = reader
-            .isset(&FieldName::DevPacketId)
-            .then(|| reader.read(&FieldName::DevPacketId) as u8);
+            .isset(&FieldName::DevPktId)
+            .then(|| reader.read(&FieldName::DevPktId) as u8);
         let outid = inid.map(|_| self.next_pkt_id());
         (inid, outid)
     }
 
-    /// Writes [FieldName::DevSessionId] by default and a written reliable
+    /// Writes [FieldName::DevSid] by default and a written reliable
     /// value of either [Rel::Seq] or [Rel::Id], or no value written at all
     /// if [Rel::None] is set
     pub fn seed_pkt(&self, writer: &mut BitWriter, sid: u32, rel: Rel) {
-        writer.write(&FieldName::DevSessionId, &sid);
+        writer.write(&FieldName::DevSid, &sid);
         match rel {
-            Rel::Seq(seq) => {
-                writer.write(&FieldName::DevSequence, &(seq as u32))
-            }
-            Rel::Id(id) => {
-                writer.write(&FieldName::DevPacketId, &(id as u32))
-            }
+            Rel::Seq(seq) => writer.write(&FieldName::DevSeq, &(seq as u32)),
+            Rel::Id(id) => writer.write(&FieldName::DevPktId, &(id as u32)),
             Rel::None => {}
         }
     }
