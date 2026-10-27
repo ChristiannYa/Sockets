@@ -43,10 +43,10 @@ impl PoseTrack {
     /// Merge what one record carried into this player's last-known pose fields
     /// and, once every field is known, add the decoded pose to the history at
     /// `t_s`.
-    pub fn apply(&mut self, delta: &RawPose, t_s: f64) {
+    /// Returns the pose if was pushed
+    pub fn apply(&mut self, delta: &RawPose, t_s: f64) -> Option<PoseSample> {
         self.raw.merge(delta);
-        if let Some(pose) = self.raw.decode() {
-            self.history.push(t_s, pose);
-        }
+        let pose = self.raw.decode()?;
+        self.history.push(t_s, pose)
     }
 }

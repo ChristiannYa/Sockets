@@ -33,6 +33,15 @@ struct PlayerDev {
     im_new: bool,
 }
 
+/// What the newest snapshot said about the local player, as one consistent
+/// union for the predictor to reconcile against. Handed over once, see
+/// [`PlayerStates::take_my_server_state`]
+pub struct MyServerState {
+    pub simed_seq: Seq,
+    pub pose: PoseSample,
+    pub vel_y: f32,
+}
+
 struct PlayerState {
     pose: PoseTrack,
     color: RawColor,
@@ -77,6 +86,7 @@ pub struct PlayerStates {
     schema: PacketSchema,
     players: HashMap<u32, PlayerState>,
     my_sid: Option<u32>,
+    my_server_state: Option<MyServerState>,
     dbg: PlayersStateDbg,
 }
 
@@ -90,6 +100,7 @@ impl PlayerStates {
             schema,
             players: HashMap::new(),
             my_sid: None,
+            my_server_state: None,
             dbg: PlayersStateDbg::default(),
         }
     }
@@ -226,7 +237,27 @@ impl PlayerStates {
                 .entry(dev.sid)
                 .or_insert_with(PlayerState::new);
 
-            player.pose.apply(&delta.pose, t_s);
+            let pose = player.pose.apply(&delta.pose, t_s);
+
+            if Some(dev.sid) == self.my_sid
+                && let (Some(pose), Some(simed_seq), Some(vel_y)) =
+                    (pose, dev.simed_seq, delta.vel.decode_y())
+            {
+                self.my_server_state =
+                    Some(MyServerState { simed_seq, vel_y, pose })
+            }
         }
+    }
+
+    /// Hand over the newest server state of the local player, and clears it.
+    ///
+    /// The predictor asks every client tick, but a snapshot arrives only now
+    /// and then. Clearing on read makes each snapshot reconcile exactly once:
+    /// [`None`] means "nothing new, keep predicting", so a stale snapshot is
+    /// never rebased onto again.
+    ///
+    /// If several snapshots arrive between two asks, only the newest is kept
+    pub(super) fn take_my_server_state(&mut self) -> Option<MyServerState> {
+        self.my_server_state.take()
     }
 }
