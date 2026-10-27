@@ -34,6 +34,7 @@ pub fn recv(manager: &mut Manager, skt_src: SocketAddr, buf: &[u8]) {
     }
 }
 
+#[rustfmt::skip]
 fn decode(
     manager: &Manager,
     buf: &[u8],
@@ -59,13 +60,14 @@ fn decode(
 
     let seq = Seq(reader.read(&FieldName::IntentSeq) as u8);
 
-    let mv_x = qua::intent::MV.decode(reader.read(&FieldName::IntentMvX));
-    let mv_z = qua::intent::MV.decode(reader.read(&FieldName::IntentMvZ));
-    let yaw = qua::intent::YAW.decode(reader.read(&FieldName::IntentYaw));
+    let x = qua::player::intent::MV.decode(reader.read(&FieldName::IntentMvX));
+    let z = qua::player::intent::MV.decode(reader.read(&FieldName::IntentMvZ));
+    let yaw = qua::player::intent::YAW.decode(reader.read(&FieldName::IntentYaw));
     let jump_ct = reader.read(&FieldName::IntentJump) as u8;
     let crouch = reader.read(&FieldName::IntentCrouch) == 1;
 
-    let held = PlayerIntentSimHeld { mv_x, mv_z, yaw, is_crouching: crouch };
+    let held =
+        PlayerIntentSimHeld { mv_x: x, mv_z: z, yaw, is_crouching: crouch };
     let edges = PlayerIntentSimEdges { jump: jump_ct };
     let sim = PlayerIntentSim::<u8> { held, edges };
 

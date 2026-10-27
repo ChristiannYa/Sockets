@@ -16,9 +16,9 @@ pub fn encode(
     let mut writer = BitWriter::new(schema);
 
     writer.write(&FieldName::IntentSeq, &(seq as u32));
-    writer.write(&FieldName::IntentMvX, &qua::intent::MV.encode(intent.held.mv_x));
-    writer.write(&FieldName::IntentMvZ, &qua::intent::MV.encode(intent.held.mv_z));
-    writer.write(&FieldName::IntentYaw, &qua::intent::YAW.encode(intent.held.yaw));
+    writer.write(&FieldName::IntentMvX, &qua::player::intent::MV.encode(intent.held.mv_x));
+    writer.write(&FieldName::IntentMvZ, &qua::player::intent::MV.encode(intent.held.mv_z));
+    writer.write(&FieldName::IntentYaw, &qua::player::intent::YAW.encode(intent.held.yaw));
     writer.write(&FieldName::IntentJump, &(intent.edges.jump as u32));
     writer.write(&FieldName::IntentCrouch, &(intent.held.is_crouching as u32));
 

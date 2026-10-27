@@ -55,7 +55,7 @@ impl Player {
         let (hsv, hsv_codec) = (Hsv::rand(), qua::hsv(schema));
 
         let ((spawn_x, spawn_z), spawn_codec) =
-            (rand_disk_pt_xz(10.0), qua::loc(schema));
+            (rand_disk_pt_xz(10.0), qua::player::loc(schema));
 
         let (enc_x, enc_z) =
             (spawn_codec.x.encode(spawn_x), spawn_codec.z.encode(spawn_z));

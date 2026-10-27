@@ -31,12 +31,12 @@ impl RawPose {
     }
 
     pub fn decode(&self, schema: &PacketSchema) -> Option<PoseSample> {
-        let loc = qua::loc(schema);
+        let loc = qua::player::loc(schema);
         Some(PoseSample {
             x: loc.x.decode(self.x?),
-            y: qua::intent::Y.decode(self.y?),
+            y: qua::player::intent::Y.decode(self.y?),
             z: loc.z.decode(self.z?),
-            yaw: qua::intent::YAW.decode(self.yaw?),
+            yaw: qua::player::intent::YAW.decode(self.yaw?),
             is_crouching: self.is_crouching? == 1,
         })
     }

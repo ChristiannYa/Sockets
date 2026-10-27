@@ -194,9 +194,9 @@ impl Player {
     ) -> [(FieldName, u32); 5] {
         let s = &self.state;
 
-        let loc_qua = qua::loc(schema);
-        let y_qua = qua::intent::Y;
-        let yaw_qua = qua::intent::YAW;
+        let loc_qua = qua::player::loc(schema);
+        let y_qua = qua::player::intent::Y;
+        let yaw_qua = qua::player::intent::YAW;
 
         [
             (FieldName::LocationX, loc_qua.x.encode(s.pos[0])),

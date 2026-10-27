@@ -1,8 +1,9 @@
-use crate::pkt::FieldName;
+use super::FieldName;
 
 pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::DevSid, 6),
     (FieldName::DevSeq, 8),
+    (FieldName::DevSimedSeq, 8),
     (FieldName::DevPing, 1),
     (FieldName::DevPktId, 8),
     (FieldName::DevImNew, 1),
@@ -16,6 +17,7 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::LocationZ, 11),
     (FieldName::LocationY, 8),
     (FieldName::Yaw, 10),
+    (FieldName::VelY, 8),
     (FieldName::ColorH, 6),
     (FieldName::ColorS, 3),
     (FieldName::ColorV, 3),
