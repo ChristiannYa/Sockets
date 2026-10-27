@@ -5,7 +5,7 @@ use crate::{
 use bitp::{
     bits::{BitReader, BitWriter, DecodeType, PacketSchema},
     pkt::{FieldName, PacketKind},
-    qua,
+    qua::{self, player as plqua},
     rel::retx::PendingPacket,
 };
 use std::time::Instant;
@@ -188,19 +188,22 @@ impl<'w> WorldPacker<'w> {
 }
 
 impl Player {
-    fn encode_int_fields(&self) -> [(FieldName, u32); 5] {
+    /// @TODO:
+    /// [`FieldName::VelY`] and [`FieldName::DevSimedSeq`] are only needed by
+    /// the local player, but the snapshot is one buffer broadcast to
+    /// everyone, so every record carries them (+16 bits per player).
+    /// Optimize with per-player snapshots
+    fn encode_int_fields(&self) -> [(FieldName, u32); 7] {
         let s = &self.state;
 
-        let loc_qua = qua::player::loc();
-        let y_qua = qua::player::intent::Y;
-        let yaw_qua = qua::player::intent::YAW;
-
         [
-            (FieldName::LocationX, loc_qua.x.encode(s.pos[0])),
-            (FieldName::LocationZ, loc_qua.z.encode(s.pos[2])),
-            (FieldName::LocationY, y_qua.encode(s.pos[1])),
-            (FieldName::Yaw, yaw_qua.encode(s.yaw)),
+            (FieldName::DevSimedSeq, self.intent_queue.simed_seq.0 as u32),
+            (FieldName::LocationX, plqua::loc().x.encode(s.pos[0])),
+            (FieldName::LocationZ, plqua::loc().z.encode(s.pos[2])),
+            (FieldName::LocationY, plqua::intent::Y.encode(s.pos[1])),
+            (FieldName::Yaw, plqua::intent::YAW.encode(s.yaw)),
             (FieldName::IsCrouching, s.crouching as u32),
+            (FieldName::VelY, plqua::VEL_Y.encode(s.vel[1])),
         ]
     }
 

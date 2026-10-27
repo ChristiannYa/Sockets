@@ -1,9 +1,7 @@
 mod history;
 
 use super::{PoseSample, RawPose};
-use crate::{
-    bits::PacketSchema, godot::state::RENDER_DELAY_S, sim::consts::SS_INTV_S,
-};
+use crate::{godot::state::RENDER_DELAY_S, sim::consts::SS_INTV_S};
 use history::PoseHistory;
 
 /// Samples kept per player. Enough to cover the render delay, +2 for the pair

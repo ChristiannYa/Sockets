@@ -1,6 +1,9 @@
 use super::FixedPoint;
 use crate::pkt::FieldName;
 
+pub const VEL_Y: FixedPoint =
+    FixedPoint::new(0.25, 128, FieldName::VelY.blen());
+
 pub struct LocCodec {
     pub x: FixedPoint,
     pub z: FixedPoint,

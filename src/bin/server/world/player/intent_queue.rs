@@ -20,7 +20,7 @@ pub struct PlayerIntentQueue {
     /// The sequence number the simulation most recently simulated.
     /// Used to echo it on snapshots, and the client will use it for
     /// reconciliation
-    simed_seq: Seq,
+    pub simed_seq: Seq,
 
     /// Edge counters from the intent the simulation most recently simulated.
     /// None until the first intent, which only seeds it, so a player whose

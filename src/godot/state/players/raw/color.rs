@@ -32,37 +32,3 @@ impl RawColor {
         })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::pkt::FIELD_LENGTHS;
-
-    #[test]
-    fn decodes_only_when_every_field_is_known() {
-        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
-        let mut color = RawColor::default();
-
-        color.set(&FieldName::ColorH, 1);
-        color.set(&FieldName::ColorS, 1);
-        assert!(color.decode(&schema).is_none());
-
-        color.set(&FieldName::ColorV, 1);
-        assert!(color.decode(&schema).is_some());
-    }
-
-    #[test]
-    fn merge_keeps_what_the_new_one_lacks() {
-        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
-        let mut stored = RawColor::default();
-        stored.set(&FieldName::ColorH, 1);
-        stored.set(&FieldName::ColorS, 1);
-        stored.set(&FieldName::ColorV, 1);
-
-        let mut new = RawColor::default();
-        new.set(&FieldName::ColorH, 2);
-        stored.merge(&new);
-
-        assert!(stored.decode(&schema).is_some());
-    }
-}

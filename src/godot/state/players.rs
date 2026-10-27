@@ -26,6 +26,13 @@ use godot::prelude::{
     godot_api,
 };
 
+struct PlayerDev {
+    sid: u32,
+    seq: Option<Seq>,
+    simed_seq: Option<Seq>,
+    im_new: bool,
+}
+
 struct PlayerState {
     pose: PoseTrack,
     color: RawColor,
@@ -171,18 +178,24 @@ fn pose_to_array(pose: Option<PoseSample>) -> PackedFloat32Array {
 
 impl PlayerStates {
     fn apply_delta(&mut self, record: &[u8]) {
-        let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
-        else {
+        let Some(delta) = PlayerDelta::read(&self.schema, record) else {
             return;
         };
 
-        if delta.is_new {
-            self.my_sid = Some(sid)
+        let Some(dev) = delta.dev.decode() else {
+            return;
+        };
+
+        if dev.im_new {
+            self.my_sid = Some(dev.sid)
         }
 
-        let player = self.players.entry(sid).or_insert_with(PlayerState::new);
+        let player = self
+            .players
+            .entry(dev.sid)
+            .or_insert_with(PlayerState::new);
 
-        if !player.apply_seq(delta.seq) {
+        if !player.apply_seq(dev.seq) {
             return;
         }
 
@@ -200,13 +213,18 @@ impl PlayerStates {
         self.dbg.frzw.on_ss(t_s);
 
         for record in records::split(records_buf) {
-            let Some((sid, delta)) = PlayerDelta::read(&self.schema, record)
-            else {
+            let Some(delta) = PlayerDelta::read(&self.schema, record) else {
                 continue;
             };
 
-            let player =
-                self.players.entry(sid).or_insert_with(PlayerState::new);
+            let Some(dev) = delta.dev.decode() else {
+                continue;
+            };
+
+            let player = self
+                .players
+                .entry(dev.sid)
+                .or_insert_with(PlayerState::new);
 
             player.pose.apply(&delta.pose, t_s);
         }
