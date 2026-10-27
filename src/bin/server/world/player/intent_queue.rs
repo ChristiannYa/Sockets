@@ -1,6 +1,5 @@
 mod debug;
 
-use super::edges;
 use bitp::{
     pkt::Seq,
     sim::{PlayerIntentSim, PlayerIntentSimEdges},
@@ -66,7 +65,7 @@ impl PlayerIntentQueue {
                 self.dbg.on_queue_found();
 
                 let edges = match self.simed_edge_cts {
-                    Some(prev) => edges::diffs(int.edges, prev),
+                    Some(prev) => int.edges.diffs(prev),
                     None => PlayerIntentSimEdges::default(),
                 };
 

@@ -18,6 +18,19 @@ pub struct PlayerIntentSimEdges<T> {
     // pub shot: T,
 }
 
+impl PlayerIntentSimEdges<u8> {
+    /// Which counters differ between these edges and the previous ones.
+    ///
+    /// Wraping needs no special case because any difference counts (7 -> 0
+    /// included)
+    pub fn diffs(
+        &self,
+        new: PlayerIntentSimEdges<u8>,
+    ) -> PlayerIntentSimEdges<bool> {
+        PlayerIntentSimEdges { jump: self.jump != new.jump }
+    }
+}
+
 /// A player's input for one tick: the state they're *in* (`held`) plus the
 /// one-shot actions they performed (`edges`).
 ///
@@ -47,5 +60,36 @@ impl PlayerIntentSim<bool> {
             held: self.held,
             edges: PlayerIntentSimEdges::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn edg(jump: u8) -> PlayerIntentSimEdges<u8> {
+        PlayerIntentSimEdges { jump }
+    }
+
+    #[test]
+    fn changed_counter_fires() {
+        assert!(edg(3).diffs(edg(2)).jump);
+    }
+
+    #[test]
+    fn same_counter_does_not_fire() {
+        assert!(!edg(2).diffs(edg(2)).jump);
+    }
+
+    #[test]
+    fn wrap_fires() {
+        // 3-bit counter: 7 is the max, the next press wraps to 0
+        assert!(edg(0).diffs(edg(7)).jump);
+    }
+
+    #[test]
+    fn skipped_counters_fire() {
+        // 2 presses between received intents is still 1 jump
+        assert!(edg(4).diffs(edg(2)).jump);
     }
 }

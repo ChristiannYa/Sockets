@@ -1,4 +1,3 @@
-mod edges;
 mod intent_queue;
 
 use super::{player::intent_queue::PlayerIntentQueue, sim};
