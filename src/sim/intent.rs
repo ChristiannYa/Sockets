@@ -34,23 +34,25 @@ impl PlayerIntentSimEdges<u8> {
         }
     }
 
-    /// Edges fired by `self`, given the counters simulated before it.
-    /// With no previous counters (the first intent) nothing fires, because
-    /// the first intent only seeds them.
+    /// Edges fired by `self`, given the counters of the intent simulated
+    /// right before it (`prev`). With no previous counters (the first
+    /// intent) nothing fires, because the first intent only seeds them.
     ///
-    /// The server and the client's replay both call this, with the counters
-    /// of the intent simulated right before `self`. They can still disagree
-    /// when an intent is lost. The server only sees intents that arrived, so
-    /// a lost intent is skipped and its counter change firess on the next one
-    /// that arrives. The client has every intent it sent, so its replay fires
-    /// on the intent where the counter changed. The jump lands later on the
-    /// server than the replay: a small, honest misprediction.
+    /// The server and the client's replay both call this, but their `prev`
+    /// can differ when an intent is lost. The server compares against the
+    /// last intent that arrived, so a lost intent's counter change fires on
+    /// the next one. The client has every intent it sent, so it fires on
+    /// the one where the counter changed. The server's jump comes one tick
+    /// later than the client predicted, until the next snapshot corrects
+    /// it.
     ///
     /// ```text
-    /// client sent:           #4 jump=1   #5 jump=2   #6 jump=2
-    /// server received:       #4          (lost)      #6
-    /// server fires on:                               #6 (2 != 1)
-    /// client replay fires on:            #5
+    /// intent (client seq):   #4    #5     #6
+    /// jump counter:          1     2      2
+    /// arrived at server:     yes   LOST   yes
+    ///
+    /// server fires on:                    #6   (2 != 1, the counter of #4)
+    /// client replay fires on:      #5          (2 != 1, the counter of #4)
     /// ```
     pub fn fired(
         &self,
