@@ -43,7 +43,7 @@ fn decode(
 
     let payload_ceil_len = INTENT_FIELDS
         .iter()
-        .map(|field_name| schema.info_of(field_name).len)
+        .map(|field_name| field_name.blen())
         .sum::<usize>()
         .div_ceil(8);
     if buf.len() < schema.mask_len() + payload_ceil_len {

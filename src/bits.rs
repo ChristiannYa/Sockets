@@ -1,6 +1,5 @@
 mod codec;
 mod schema;
-
 pub mod utils;
 
 pub use codec::DecodeType;
