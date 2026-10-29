@@ -142,7 +142,18 @@ impl UdpState {
         };
 
         self.dbg.ss_wtch.track_gap(arrival_s, ss_s);
-        self.players.bind_mut().apply_ss(records, ss_s);
+
+        {
+            let server = {
+                let mut players = self.players.bind_mut();
+                players.apply_ss(records, ss_s);
+                players.take_my_server_state()
+            };
+
+            if let Some(server) = server {
+                self.locsim.bind_mut().push_server_state(server);
+            }
+        }
 
         true
     }

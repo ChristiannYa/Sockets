@@ -12,15 +12,13 @@ pub struct LocCodec {
     pub z: FixedPoint,
 }
 
-pub fn loc() -> LocCodec {
-    let fixed_pt = |field_name: FieldName| {
-        let bits_len = field_name.blen();
+pub const LOC_HOR: LocCodec =
+    LocCodec { x: FieldName::LocationX.fpt(), z: FieldName::LocationZ.fpt() };
+
+impl FieldName {
+    const fn fpt(self) -> FixedPoint {
+        let bits_len = self.blen();
         let offset = 1u32 << (bits_len - 1); // half of 2^bits_len
         FixedPoint::new(0.1, offset, bits_len)
-    };
-
-    LocCodec {
-        x: fixed_pt(FieldName::LocationX),
-        z: fixed_pt(FieldName::LocationZ),
     }
 }

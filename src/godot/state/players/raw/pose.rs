@@ -31,7 +31,7 @@ impl RawPose {
     }
 
     pub fn decode(&self) -> Option<PoseSample> {
-        let loc = qua::player::loc();
+        let loc = qua::player::LOC_HOR;
         Some(PoseSample {
             x: loc.x.decode(self.x?),
             y: qua::player::intent::Y.decode(self.y?),

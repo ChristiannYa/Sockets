@@ -1,5 +1,6 @@
 mod predictor;
 
+use super::super::players::MyServerState;
 use crate::{
     pkt::Seq,
     qua::player::intent as pqua,
@@ -9,7 +10,7 @@ use crate::{
     },
 };
 use godot::prelude::{GodotClass, Vector3, godot_api};
-use predictor::Predictor;
+use predictor::{Predictor, pos_err, pos_tolerance};
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
@@ -23,14 +24,15 @@ pub struct LocalSim {
 
     /// What was predicted per sent intent, for reconciling against snapshots
     predictor: Predictor,
+
+    /// The newest server state not yet reconciled against.
+    ///
+    /// A newer one replaces it, since only the latest matters
+    pending: Option<MyServerState>,
 }
 
 #[godot_api]
 impl LocalSim {
-    pub fn new() -> LocalSim {
-        LocalSim { state: None, prev_edges: None, predictor: Predictor::new() }
-    }
-
     /// Runs one [`Step`] on the intent as the server will see it: `x`, `z`,
     /// and `yaw` are rounded through the wire quantizers, so the client
     /// doesn't predict on values the server never receives.
@@ -63,9 +65,25 @@ impl LocalSim {
         // so `prev` follows the same intent stream as the server's.
         let prev = self.prev_edges.replace(counters);
 
+        // Taking it before the seeded check means that a snapshot that
+        // arrives before the seed is dropped instead of being held and
+        // reconciled later against an empty ring.
+        let server = self.pending.take();
+
         let Some(state) = self.state.as_mut() else {
             return;
         };
+
+        if let Some(server) = server {
+            let predicted = self.predictor.ack(server.simed_seq);
+            let err = predicted.map(|p| {
+                pos_err(&p, [server.pose.x, server.pose.y, server.pose.z])
+            });
+
+            if err.is_none_or(|e| e > pos_tolerance()) {
+                let _ = server;
+            }
+        }
 
         let intent = PlayerIntentSim {
             held: PlayerIntentSimHeld {
@@ -99,5 +117,20 @@ impl LocalSim {
         self.state.as_ref().map_or(Vector3::ZERO, |s| {
             Vector3::new(s.pos[0], s.pos[1], s.pos[2])
         })
+    }
+}
+
+impl LocalSim {
+    pub fn new() -> LocalSim {
+        LocalSim {
+            state: None,
+            prev_edges: None,
+            predictor: Predictor::new(),
+            pending: None,
+        }
+    }
+
+    pub fn push_server_state(&mut self, server: MyServerState) {
+        self.pending = Some(server);
     }
 }

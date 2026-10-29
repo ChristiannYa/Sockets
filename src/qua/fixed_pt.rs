@@ -20,4 +20,6 @@ impl FixedPoint {
     pub fn decode(&self, val: u32) -> f32 {
         (val as i32 - self.offset as i32) as f32 * self.step
     }
+
+    pub fn step(&self) -> f32 { self.step }
 }

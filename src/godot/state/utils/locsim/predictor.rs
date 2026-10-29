@@ -1,16 +1,44 @@
-use std::collections::VecDeque;
-
 use crate::{
     pkt::Seq,
+    qua::player as pqua,
     sim::{PlayerIntentSim, PlayerState},
     util::now,
 };
+use std::collections::VecDeque;
 
 /// Max entries kept.
 ///
 /// It must stay under 128, otherwise the circular [`Seq::is_newer_than`]
 /// compare against an ack older than the oldest entry flips
 const CAP: usize = 64;
+
+/// Largest position error (meters) that quantization alone can explain.
+///
+/// The server's position arrives rounded to the wire grid while the client
+/// predicts with the raw floats, so the two differ even when they agree.
+/// The worst case is a point in the middle of a grid cell, half the cell's
+/// diagonal away from the nearest grid point, so anything at or below this
+/// is rounding noise. Anything above it is a real disagreement (a lost
+/// intent, a dry tick, a jump landing on a different tick) and gets
+/// corrected.
+///
+/// Derived from the position quantizers, so it follows them if their steps
+/// change. It is not widened for gameplay effects: if corrections turn out
+/// to be too frequent, a margin goes here
+pub(super) fn pos_tolerance() -> f32 {
+    let diag = pqua::LOC_HOR
+        .x
+        .step()
+        .hypot(pqua::intent::Y.step())
+        .hypot(pqua::LOC_HOR.z.step());
+    diag / 2.0
+}
+
+/// Distance between the predicted position and the one the server sent
+pub(super) fn pos_err(predicted: &PlayerState, server: [f32; 3]) -> f32 {
+    let d = |i: usize| predicted.pos[i] - server[i];
+    (d(0).powi(2) + d(1).powi(2) + d(2).powi(2)).sqrt()
+}
 
 /// One predicted tick
 struct Entry {
@@ -57,5 +85,24 @@ impl Predictor {
             self.ring.pop_front();
         }
         self.ring.push_back(Entry { seq, intent, after });
+    }
+
+    /// Handles a server ack of everything up to and including `simed_seq`.
+    ///
+    /// Drops those entries and returns the state predicted right after
+    /// `simed_seq`, otherwise [`None`] if there is no entry for it (it was
+    /// never recored, or it already fell out of the ring).
+    /// What remains is exactly the unacked intents, oldest first, for the
+    /// replay
+    pub(super) fn ack(&mut self, simed_seq: Seq) -> Option<PlayerState> {
+        let predicted = self
+            .ring
+            .iter()
+            .find(|en| en.seq == simed_seq)
+            .map(|en| en.after);
+
+        self.ring.retain(|en| en.seq.is_newer_than(simed_seq));
+
+        predicted
     }
 }
