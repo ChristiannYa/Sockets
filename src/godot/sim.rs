@@ -9,7 +9,7 @@ use godot::prelude::{Gd, GodotClass, Vector3, godot_api};
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
-pub struct LocalSim {
+pub struct UdpLocalSim {
     /// [`None`] until [`LocalSim::seed`] is called
     state: Option<PlayerState>,
 
@@ -19,7 +19,7 @@ pub struct LocalSim {
 }
 
 #[godot_api]
-impl LocalSim {
+impl UdpLocalSim {
     #[func]
     pub fn create() -> Gd<Self> {
         Gd::from_init_fn(|_| Self { state: None, prev_edges: None })

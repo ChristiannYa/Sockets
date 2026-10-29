@@ -19,7 +19,6 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::LocationZ, 11),
     (FieldName::LocationY, 8),
     (FieldName::Yaw, 10),
-    (FieldName::VelY, 8),
     (FieldName::ColorH, 6),
     (FieldName::ColorS, 3),
     (FieldName::ColorV, 3),
@@ -28,6 +27,7 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
     (FieldName::IsJumping, 1),
     (FieldName::IsCrouching, 1),
     (FieldName::IsFriendly, 1),
+    (FieldName::VelY, 8),
 ];
 
 impl FieldName {
