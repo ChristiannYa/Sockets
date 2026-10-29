@@ -104,7 +104,7 @@ pub struct UdpState {
 impl UdpState {
     #[func]
     fn create() -> Gd<Self> {
-        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+        let schema = PacketSchema::build(&FIELD_LENGTHS).unwrap();
         let players = Gd::from_object(PlayerStates::new(schema));
 
         Gd::from_init_fn(|_| Self {

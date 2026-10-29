@@ -2,12 +2,12 @@ use super::FieldName;
 
 macro_rules! lengths {
     ($($f:ident),* $(,)?) => {
-        &[$((FieldName::$f, FieldName::$f.blen())),*]
+        [$((FieldName::$f, FieldName::$f.blen())),*]
     };
 }
 
 #[rustfmt::skip]
-pub static FIELD_LENGTHS: &[(FieldName, usize)] = lengths![
+pub static FIELD_LENGTHS: [(FieldName, usize); 25] = lengths![
     DevSid, DevSeq, DevSimedSeq, DevPing, DevPktId, DevImNew,
     IntentSeq, IntentMvX, IntentMvZ, IntentYaw, IntentJump, IntentCrouch,
     LocationX, LocationY, LocationZ, Yaw, VelY,

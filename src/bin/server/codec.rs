@@ -26,7 +26,8 @@ pub struct Codec {
 
 impl Codec {
     pub fn new() -> Self {
-        let schema: PacketSchema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+        let schema: PacketSchema =
+            PacketSchema::build(&FIELD_LENGTHS).unwrap();
 
         Codec { schema, next_pkt_id: Cell::new(0) }
     }

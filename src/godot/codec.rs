@@ -32,7 +32,7 @@ impl UdpCodec {
 
     #[func]
     fn create() -> Gd<Self> {
-        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+        let schema = PacketSchema::build(&FIELD_LENGTHS).unwrap();
         Gd::from_init_fn(|_| Self { schema })
     }
 

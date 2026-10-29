@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn read_misc_spawn_packet_layout() -> Result<(), String> {
         use crate::pkt::FIELD_LENGTHS;
-        let schema = PacketSchema::build(FIELD_LENGTHS).unwrap();
+        let schema = PacketSchema::build(&FIELD_LENGTHS).unwrap();
 
         // Same fields, same order as the server's spawn packet
         let field_values = [
