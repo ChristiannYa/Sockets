@@ -1,3 +1,5 @@
+mod predictor;
+
 use crate::{
     qua::player::intent as pqua,
     sim::{
@@ -60,14 +62,17 @@ impl UdpLocalSim {
             return;
         };
 
-        let held = PlayerIntentSimHeld {
-            mv_x: pqua::MV.decode(pqua::MV.encode(x)),
-            mv_z: pqua::MV.decode(pqua::MV.encode(z)),
-            yaw: pqua::YAW.decode(pqua::YAW.encode(yaw)),
-            is_crouching,
+        let intent = PlayerIntentSim {
+            held: PlayerIntentSimHeld {
+                mv_x: pqua::MV.decode(pqua::MV.encode(x)),
+                mv_z: pqua::MV.decode(pqua::MV.encode(z)),
+                yaw: pqua::YAW.decode(pqua::YAW.encode(yaw)),
+                is_crouching,
+            },
+            edges: counters.fired(prev),
         };
-        let edges = counters.fired(prev);
-        Step::new(state, &PlayerIntentSim { held, edges }).run();
+
+        Step::new(state, &intent).run();
     }
 
     /// Starts the sim at the spawn defaults (standing, on the floor, at

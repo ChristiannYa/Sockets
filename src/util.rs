@@ -1,11 +1,16 @@
+use chrono::format::{DelayedFormat, StrftimeItems};
 use rand::RngExt;
+
+pub fn now() -> DelayedFormat<StrftimeItems<'static>> {
+    chrono::Local::now().format("%H:%M:%S%.3f")
+}
 
 #[macro_export]
 macro_rules! logt {
     ($($arg:tt)*) => {
         println!(
             "[{}] {}",
-            ::chrono::Local::now().format("%H:%M:%S%.3f"),
+            $crate::util::now(),
             format_args!($($arg)*)
         )
     };
