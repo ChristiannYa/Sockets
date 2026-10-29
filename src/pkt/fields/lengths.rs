@@ -10,9 +10,10 @@ macro_rules! lengths {
 pub static FIELD_LENGTHS: &[(FieldName, usize)] = lengths![
     DevSid, DevSeq, DevSimedSeq, DevPing, DevPktId, DevImNew,
     IntentSeq, IntentMvX, IntentMvZ, IntentYaw, IntentJump, IntentCrouch,
-    LocationX, LocationZ, LocationY, Yaw,
+    LocationX, LocationY, LocationZ, Yaw, VelY,
+    IsJumping, IsCrouching, IsFriendly,
     ColorH, ColorS, ColorV,
-    Health, PlayerCount, IsJumping, IsCrouching, IsFriendly, VelY,
+    Health, PlayerCount
 ];
 
 impl FieldName {

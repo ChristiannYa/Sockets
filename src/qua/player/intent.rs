@@ -1,8 +1,11 @@
-use crate::qua::fixed_pt::FixedPoint;
+use crate::{pkt::FieldName, qua::fixed_pt::FixedPoint};
+use std::f32::consts::TAU;
 
-pub const MV: FixedPoint = FixedPoint::new(1.0 / 31.0, 31, 6);
+pub const MV: FixedPoint =
+    FixedPoint::new(1.0 / 31.0, 31, FieldName::IntentMvX.blen());
 
 pub const YAW: FixedPoint =
-    FixedPoint::new(std::f32::consts::TAU / 1024.0, 512, 10);
+    FixedPoint::new(TAU / 1024.0, 512, FieldName::IntentYaw.blen());
 
-pub const Y: FixedPoint = FixedPoint::new(0.05, 20, 8);
+pub const Y: FixedPoint =
+    FixedPoint::new(0.05, 20, FieldName::LocationY.blen());

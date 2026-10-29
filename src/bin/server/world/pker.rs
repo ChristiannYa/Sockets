@@ -199,11 +199,11 @@ impl Player {
         [
             (FieldName::DevSimedSeq, self.intent_queue.simed_seq.0 as u32),
             (FieldName::LocationX, plqua::loc().x.encode(s.pos[0])),
-            (FieldName::LocationZ, plqua::loc().z.encode(s.pos[2])),
             (FieldName::LocationY, plqua::intent::Y.encode(s.pos[1])),
+            (FieldName::LocationZ, plqua::loc().z.encode(s.pos[2])),
             (FieldName::Yaw, plqua::intent::YAW.encode(s.yaw)),
-            (FieldName::IsCrouching, s.crouching as u32),
             (FieldName::VelY, plqua::VEL_Y.encode(s.vel[1])),
+            (FieldName::IsCrouching, s.crouching as u32),
         ]
     }
 
