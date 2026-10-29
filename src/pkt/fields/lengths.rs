@@ -7,10 +7,10 @@ macro_rules! lengths {
 }
 
 #[rustfmt::skip]
-pub static FIELD_LENGTHS: [(FieldName, usize); 25] = lengths![
+pub static FIELD_LENGTHS: [(FieldName, usize); 27] = lengths![
     DevSid, DevSeq, DevSimedSeq, DevPing, DevPktId, DevImNew,
     IntentSeq, IntentMvX, IntentMvZ, IntentYaw, IntentJump, IntentCrouch,
-    LocationX, LocationY, LocationZ, Yaw, VelY,
+    LocationX, LocationY, LocationZ, Yaw, VelX, VelY, VelZ,
     IsJumping, IsCrouching, IsFriendly,
     ColorH, ColorS, ColorV,
     Health, PlayerCount
@@ -36,7 +36,9 @@ impl FieldName {
             FieldName::LocationZ => 11,
             FieldName::LocationY => 8,
             FieldName::Yaw => 10,
+            FieldName::VelX => 6,
             FieldName::VelY => 8,
+            FieldName::VelZ => 6,
             FieldName::ColorH => 6,
             FieldName::ColorS => 3,
             FieldName::ColorV => 3,

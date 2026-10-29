@@ -189,11 +189,11 @@ impl<'w> WorldPacker<'w> {
 
 impl Player {
     /// @TODO:
-    /// [`FieldName::VelY`] and [`FieldName::DevSimedSeq`] are only needed by
+    /// [`FieldName::Vel*`] and [`FieldName::DevSimedSeq`] are only needed by
     /// the local player, but the snapshot is one buffer broadcast to
     /// everyone, so every record carries them (+16 bits per player).
     /// Optimize with per-player snapshots
-    fn encode_int_fields(&self) -> [(FieldName, u32); 7] {
+    fn encode_int_fields(&self) -> [(FieldName, u32); 9] {
         let s = &self.state;
 
         [
@@ -202,7 +202,9 @@ impl Player {
             (FieldName::LocationY, plqua::intent::Y.encode(s.pos[1])),
             (FieldName::LocationZ, plqua::loc().z.encode(s.pos[2])),
             (FieldName::Yaw, plqua::intent::YAW.encode(s.yaw)),
+            (FieldName::VelX, plqua::VEL_HOR.encode(s.vel[0])),
             (FieldName::VelY, plqua::VEL_Y.encode(s.vel[1])),
+            (FieldName::VelZ, plqua::VEL_HOR.encode(s.vel[2])),
             (FieldName::IsCrouching, s.crouching as u32),
         ]
     }

@@ -1,8 +1,11 @@
 use super::FixedPoint;
-use crate::pkt::FieldName;
+use crate::{pkt::FieldName, sim::consts::SPEED};
 
 pub const VEL_Y: FixedPoint =
     FixedPoint::new(0.25, 128, FieldName::VelY.blen());
+
+pub const VEL_HOR: FixedPoint =
+    FixedPoint::new(SPEED / 31.0, 31, FieldName::VelX.blen());
 
 pub struct LocCodec {
     pub x: FixedPoint,

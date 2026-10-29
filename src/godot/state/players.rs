@@ -39,7 +39,7 @@ struct PlayerDev {
 pub struct MyServerState {
     pub simed_seq: Seq,
     pub pose: PoseSample,
-    pub vel_y: f32,
+    pub vel: (f32, f32, f32),
 }
 
 struct PlayerState {
@@ -240,11 +240,11 @@ impl PlayerStates {
             let pose = player.pose.apply(&delta.pose, t_s);
 
             if Some(dev.sid) == self.my_sid
-                && let (Some(pose), Some(simed_seq), Some(vel_y)) =
-                    (pose, dev.simed_seq, delta.vel.decode_y())
+                && let (Some(pose), Some(simed_seq), Some(vel)) =
+                    (pose, dev.simed_seq, delta.vel.decode())
             {
                 self.my_server_state =
-                    Some(MyServerState { simed_seq, vel_y, pose })
+                    Some(MyServerState { simed_seq, vel, pose })
             }
         }
     }
