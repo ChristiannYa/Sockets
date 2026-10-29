@@ -8,27 +8,27 @@ use crate::{
 
 /// Max entries kept.
 ///
-/// It must stay under 128, otherwise the circular [`Seq::is_newer_than`] compare
-/// against an ack older than the oldest entry flips
+/// It must stay under 128, otherwise the circular [`Seq::is_newer_than`]
+/// compare against an ack older than the oldest entry flips
 const CAP: usize = 64;
 
 /// One predicted tick
-pub(super) struct PredictorEntry {
-    pub(super) seq: Seq,
+struct Entry {
+    seq: Seq,
 
     /// The bool form that was actually stepped, so a replay doesn't recompute
     /// `fired` against a different `prev`
-    pub(super) intent: PlayerIntentSim<bool>,
+    intent: PlayerIntentSim<bool>,
 
     /// The full state after the step
-    pub(super) after: PlayerState,
+    after: PlayerState,
 }
 
 /// Remembers what the client predicted so that a snapshot can be checked
 /// against it and the unacked inputs replayed (see [`PlayerIntentSim`])
 pub(super) struct Predictor {
     /// Oldest first, which is also seq order
-    ring: VecDeque<PredictorEntry>,
+    ring: VecDeque<Entry>,
 }
 
 impl Predictor {
@@ -39,11 +39,16 @@ impl Predictor {
     /// Stores a stepped intent.
     ///
     /// At [`CAP`] the oldest entry is dropped
-    pub(super) fn record(&mut self, entry: PredictorEntry) {
+    pub(super) fn record(
+        &mut self,
+        seq: Seq,
+        intent: PlayerIntentSim<bool>,
+        after: PlayerState,
+    ) {
         debug_assert!(
             self.ring
                 .back()
-                .is_none_or(|last| entry.seq.is_newer_than(last.seq)),
+                .is_none_or(|last| seq.is_newer_than(last.seq)),
             "[{}] predictor records must come in seq order",
             now()
         );
@@ -51,6 +56,6 @@ impl Predictor {
         if self.ring.len() == CAP {
             self.ring.pop_front();
         }
-        self.ring.push_back(entry);
+        self.ring.push_back(Entry { seq, intent, after });
     }
 }

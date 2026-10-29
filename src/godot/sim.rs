@@ -1,6 +1,7 @@
 mod predictor;
 
 use crate::{
+    pkt::Seq,
     qua::player::intent as pqua,
     sim::{
         PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld,
@@ -8,6 +9,7 @@ use crate::{
     },
 };
 use godot::prelude::{Gd, GodotClass, Vector3, godot_api};
+use predictor::Predictor;
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
@@ -18,13 +20,20 @@ pub struct UdpLocalSim {
     /// Counters of the last intent sent, stepped or not. [`None`] for the
     /// first one, which seeds them (see [`PlayerIntentSimEdges::fired`])
     prev_edges: Option<PlayerIntentSimEdges<u8>>,
+
+    /// What was predicted per sent intent, for reconciling against snapshots
+    predictor: Predictor,
 }
 
 #[godot_api]
 impl UdpLocalSim {
     #[func]
-    pub fn create() -> Gd<Self> {
-        Gd::from_init_fn(|_| Self { state: None, prev_edges: None })
+    pub fn create() -> Gd<UdpLocalSim> {
+        Gd::from_init_fn(|_| UdpLocalSim {
+            state: None,
+            prev_edges: None,
+            predictor: Predictor::new(),
+        })
     }
 
     /// Runs one [`Step`] on the intent as the server will see it: `x`, `z`,
@@ -36,6 +45,7 @@ impl UdpLocalSim {
     #[func]
     fn tick(
         &mut self,
+        seq: u8,
         x: f32,
         z: f32,
         yaw: f32,
@@ -73,6 +83,7 @@ impl UdpLocalSim {
         };
 
         Step::new(state, &intent).run();
+        self.predictor.record(Seq(seq), intent, *state);
     }
 
     /// Starts the sim at the spawn defaults (standing, on the floor, at
