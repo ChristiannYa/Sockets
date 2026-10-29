@@ -8,12 +8,12 @@ use crate::{
         PlayerState, Step,
     },
 };
-use godot::prelude::{Gd, GodotClass, Vector3, godot_api};
+use godot::prelude::{GodotClass, Vector3, godot_api};
 use predictor::Predictor;
 
 #[derive(GodotClass)]
 #[class(base = RefCounted, no_init)]
-pub struct UdpLocalSim {
+pub struct LocalSim {
     /// [`None`] until [`LocalSim::seed`] is called
     state: Option<PlayerState>,
 
@@ -26,14 +26,9 @@ pub struct UdpLocalSim {
 }
 
 #[godot_api]
-impl UdpLocalSim {
-    #[func]
-    pub fn create() -> Gd<UdpLocalSim> {
-        Gd::from_init_fn(|_| UdpLocalSim {
-            state: None,
-            prev_edges: None,
-            predictor: Predictor::new(),
-        })
+impl LocalSim {
+    pub fn new() -> LocalSim {
+        LocalSim { state: None, prev_edges: None, predictor: Predictor::new() }
     }
 
     /// Runs one [`Step`] on the intent as the server will see it: `x`, `z`,

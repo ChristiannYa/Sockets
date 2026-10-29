@@ -55,7 +55,7 @@ use dbg::StateDebug;
 use godot::prelude::{Gd, GodotClass, PackedByteArray, godot_api};
 use players::PlayerStates;
 use tap::Pipe;
-use utils::Clock;
+use utils::{Clock, LocalSim};
 
 /// `[PacketKind::Ss, tick_lo, tick_hi]`, followed by the records
 const SS_HEADER_LEN: usize = 3;
@@ -96,6 +96,7 @@ const GAP_WARN_S: f64 = 3.0 * SS_INTV_S;
 #[class(base = RefCounted, no_init)]
 pub struct UdpState {
     players: Gd<PlayerStates>,
+    locsim: Gd<LocalSim>,
     clock: Clock,
     dbg: StateDebug,
 }
@@ -105,10 +106,9 @@ impl UdpState {
     #[func]
     fn create() -> Gd<Self> {
         let schema = PacketSchema::build(&FIELD_LENGTHS).unwrap();
-        let players = Gd::from_object(PlayerStates::new(schema));
-
         Gd::from_init_fn(|_| Self {
-            players,
+            players: Gd::from_object(PlayerStates::new(schema)),
+            locsim: Gd::from_object(LocalSim::new()),
             clock: Clock::new(),
             dbg: StateDebug::default(),
         })
@@ -116,6 +116,9 @@ impl UdpState {
 
     #[func]
     fn players(&self) -> Gd<PlayerStates> { self.players.clone() }
+
+    #[func]
+    fn locsim(&self) -> Gd<LocalSim> { self.locsim.clone() }
 
     /// Takes a whole snapshot packet and updates the players from it.
     ///

@@ -36,7 +36,7 @@ struct PlayerDev {
 /// What the newest snapshot said about the local player, as one consistent
 /// union for the predictor to reconcile against. Handed over once, see
 /// [`PlayerStates::take_my_server_state`]
-pub struct MyServerState {
+struct MyServerState {
     pub simed_seq: Seq,
     pub pose: PoseSample,
     pub vel: (f32, f32, f32),
