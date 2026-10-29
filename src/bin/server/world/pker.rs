@@ -3,7 +3,7 @@ use crate::{
     world::{Player, RelTarget, player::Players},
 };
 use bitp::{
-    bits::{BitReader, BitWriter, DecodeType, PacketSchema},
+    bits::{BitReader, BitWriter, DecodeType},
     pkt::{FieldName, PacketKind},
     qua::{self, player as plqua},
     rel::retx::PendingPacket,
@@ -62,7 +62,7 @@ impl<'w> WorldPacker<'w> {
             .map(|(sid, p)| {
                 self.pk(FieldsPack {
                     id: None,
-                    fields: &p.encode_meta_fields(self.codec.schema()),
+                    fields: &p.encode_meta_fields(),
                     sid: *sid,
                 })
             })
@@ -207,13 +207,10 @@ impl Player {
         ]
     }
 
-    fn encode_meta_fields(
-        &self,
-        schema: &PacketSchema,
-    ) -> [(FieldName, u32); 3] {
+    fn encode_meta_fields(&self) -> [(FieldName, u32); 3] {
         let c = &self.color;
 
-        let hsv_qua = qua::hsv(schema);
+        let hsv_qua = qua::hsv();
 
         [
             (FieldName::ColorH, hsv_qua.h.encode(c.h)),

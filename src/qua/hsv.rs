@@ -1,8 +1,4 @@
-use crate::{
-    bits::{PacketSchema, utils::mask},
-    pkt::FieldName,
-    qua::fixed_pt::FixedPoint,
-};
+use crate::{bits::utils::mask, pkt::FieldName, qua::fixed_pt::FixedPoint};
 
 pub struct HsvCodec {
     pub h: FixedPoint,
@@ -10,11 +6,11 @@ pub struct HsvCodec {
     pub v: FixedPoint,
 }
 
-pub fn hsv(schema: &PacketSchema) -> HsvCodec {
+pub fn hsv() -> HsvCodec {
     let fixed_pt = |field_name: &FieldName| {
-        let field = schema.info_of(field_name);
-        let bits_max_val = mask(&field.len) as f32;
-        FixedPoint::new(1.0 / bits_max_val, 0, field.len)
+        let field_len = field_name.blen();
+        let bits_max_val = mask(&field_len) as f32;
+        FixedPoint::new(1.0 / bits_max_val, 0, field_len)
     };
 
     HsvCodec {

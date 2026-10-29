@@ -32,7 +32,7 @@ pub static FIELD_LENGTHS: &[(FieldName, usize)] = &[
 
 impl FieldName {
     #[inline(always)]
-    pub const fn blen(self) -> usize {
+    pub const fn blen(&self) -> usize {
         match self {
             FieldName::DevSid => 6,
             FieldName::DevSeq => 8,

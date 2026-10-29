@@ -1,4 +1,4 @@
-use crate::{bits::PacketSchema, pkt::FieldName, qua, util::Hsv};
+use crate::{pkt::FieldName, qua, util::Hsv};
 
 #[derive(Default)]
 pub struct RawColor {
@@ -23,8 +23,8 @@ impl RawColor {
         self.v = new.v.or(self.v);
     }
 
-    pub fn decode(&self, schema: &PacketSchema) -> Option<Hsv> {
-        let hsv = qua::hsv(schema);
+    pub fn decode(&self) -> Option<Hsv> {
+        let hsv = qua::hsv();
         Some(Hsv {
             h: hsv.h.decode(self.h?),
             s: hsv.s.decode(self.s?),

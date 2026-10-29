@@ -59,7 +59,7 @@ impl<'w> World<'w> {
         &mut self,
         rel_target: &mut RelTarget,
     ) -> (Vec<u8>, u8) {
-        let (player, fields) = Player::spawn(self.codec.schema());
+        let (player, fields) = Player::spawn();
         self.players.insert_new(player, rel_target.sid);
         self.pker().rel_pkting(&fields, rel_target)
     }

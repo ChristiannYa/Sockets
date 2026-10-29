@@ -2,7 +2,6 @@ mod intent_queue;
 
 use super::{player::intent_queue::PlayerIntentQueue, sim};
 use bitp::{
-    bits::PacketSchema,
     pkt::FieldName,
     qua,
     sim::PlayerState,
@@ -50,8 +49,8 @@ impl Player {
 
     /// Returns a new player along with essential spawn information fields
     /// encoded
-    pub fn spawn(schema: &PacketSchema) -> (Player, [(FieldName, u32); 5]) {
-        let (hsv, hsv_codec) = (Hsv::rand(), qua::hsv(schema));
+    pub fn spawn() -> (Player, [(FieldName, u32); 5]) {
+        let (hsv, hsv_codec) = (Hsv::rand(), qua::hsv());
 
         let ((spawn_x, spawn_z), spawn_codec) =
             (rand_disk_pt_xz(10.0), qua::player::loc());

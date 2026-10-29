@@ -169,7 +169,7 @@ impl PlayerStates {
     fn color(&self, sid: i64) -> PackedFloat32Array {
         u32::try_from(sid)
             .ok()
-            .and_then(|sid| self.players.get(&sid)?.color.decode(&self.schema))
+            .and_then(|sid| self.players.get(&sid)?.color.decode())
             .map(|c| PackedFloat32Array::from(&[c.h, c.s, c.v][..]))
             .unwrap_or_default()
     }
