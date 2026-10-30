@@ -6,7 +6,7 @@ use crate::{
     qua::player::intent as pqua,
     sim::{
         PlayerIntentSim, PlayerIntentSimEdges, PlayerIntentSimHeld,
-        PlayerState, Step,
+        PlayerState, Step, consts::FLOOR_Y,
     },
 };
 use godot::prelude::{GodotClass, Vector3, godot_api};
@@ -81,7 +81,7 @@ impl LocalSim {
             });
 
             if err.is_none_or(|e| e > pos_tolerance()) {
-                let _ = server;
+                Self::rebase(state, &server);
             }
         }
 
@@ -132,5 +132,23 @@ impl LocalSim {
 
     pub fn push_server_state(&mut self, server: MyServerState) {
         self.pending = Some(server);
+    }
+
+    /// Overwrites everything the server is authoritative about with its
+    /// snapshot.
+    ///
+    /// `height` is kept: it is visual only, so the client's own value is
+    /// used.
+    fn rebase(state: &mut PlayerState, server: &MyServerState) {
+        let (vx, vy, vz) = server.vel;
+        let p = &server.pose;
+
+        state.pos = [p.x, p.y, p.z];
+        state.vel = [vx, vy, vz];
+        state.yaw = p.yaw;
+        state.crouching = p.is_crouching;
+
+        // Valid as long as the floor is a flat plane
+        state.is_on_floor = p.y <= FLOOR_Y
     }
 }
