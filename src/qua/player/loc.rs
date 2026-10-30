@@ -7,13 +7,7 @@ pub const VEL_Y: FixedPoint =
 pub const VEL_HOR: FixedPoint =
     FixedPoint::new(SPEED / 31.0, 31, FieldName::VelX.blen());
 
-pub struct LocCodec {
-    pub x: FixedPoint,
-    pub z: FixedPoint,
-}
-
-pub const LOC_HOR: LocCodec =
-    LocCodec { x: FieldName::LocationX.fpt(), z: FieldName::LocationZ.fpt() };
+pub const LOC_HOR: FixedPoint = FieldName::LocationX.fpt();
 
 impl FieldName {
     const fn fpt(self) -> FixedPoint {

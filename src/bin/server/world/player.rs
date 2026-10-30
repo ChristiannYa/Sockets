@@ -56,7 +56,7 @@ impl Player {
             (rand_disk_pt_xz(10.0), qua::player::LOC_HOR);
 
         let (enc_x, enc_z) =
-            (spawn_codec.x.encode(spawn_x), spawn_codec.z.encode(spawn_z));
+            (spawn_codec.encode(spawn_x), spawn_codec.encode(spawn_z));
 
         let fields = [
             (FieldName::LocationX, enc_x),
@@ -67,8 +67,8 @@ impl Player {
         ];
 
         let player = Player::new(
-            spawn_codec.x.decode(enc_x),
-            spawn_codec.z.decode(enc_z),
+            spawn_codec.decode(enc_x),
+            spawn_codec.decode(enc_z),
             Hsv::new(hsv.h, hsv.s, hsv.v),
         );
 

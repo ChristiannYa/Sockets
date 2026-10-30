@@ -31,11 +31,11 @@ impl RawPose {
     }
 
     pub fn decode(&self) -> Option<PoseSample> {
-        let loc = qua::player::LOC_HOR;
+        let loc_hor_qua = qua::player::LOC_HOR;
         Some(PoseSample {
-            x: loc.x.decode(self.x?),
+            x: loc_hor_qua.decode(self.x?),
             y: qua::player::intent::Y.decode(self.y?),
-            z: loc.z.decode(self.z?),
+            z: loc_hor_qua.decode(self.z?),
             yaw: qua::player::intent::YAW.decode(self.yaw?),
             is_crouching: self.is_crouching? == 1,
         })

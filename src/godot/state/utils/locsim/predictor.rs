@@ -26,11 +26,8 @@ const CAP: usize = 64;
 /// change. It is not widened for gameplay effects: if corrections turn out
 /// to be too frequent, a margin goes here
 pub(super) fn pos_tolerance() -> f32 {
-    let diag = pqua::LOC_HOR
-        .x
-        .step()
-        .hypot(pqua::intent::Y.step())
-        .hypot(pqua::LOC_HOR.z.step());
+    let step = pqua::LOC_HOR.step();
+    let diag = step.hypot(pqua::intent::Y.step()).hypot(step);
     diag / 2.0
 }
 
