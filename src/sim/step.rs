@@ -1,7 +1,7 @@
 use crate::sim::{
     consts::{
-        CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT,
-        JUMP_VEL, SPEED, TICK_DT_F32,
+        CROUCH_HEIGHT, CROUCH_SPEED, DECC, FLOOR_Y, GRAVITY, HEIGHT, JUMP_VEL,
+        SPEED, TICK_DT_F32,
     },
     intent::PlayerIntentSim,
     state::PlayerState,
@@ -36,8 +36,8 @@ impl<'a> Step<'a> {
 
     fn mv_hor_vel(&mut self) {
         let (x, z) = wish_dir(
-            self.sim_intent.held.mv_x,
-            self.sim_intent.held.mv_z,
+            self.sim_intent.held.x,
+            self.sim_intent.held.z,
             self.sim_intent.held.yaw,
         );
         if x.hypot(z) > 0.01 {
@@ -64,8 +64,8 @@ impl<'a> Step<'a> {
             return;
         }
 
-        self.p.crouching = self.sim_intent.held.is_crouching;
-        let dir = if self.p.crouching { -1.0 } else { 1.0 };
+        self.p.is_crouching = self.sim_intent.held.is_crouching;
+        let dir = if self.p.is_crouching { -1.0 } else { 1.0 };
         let h = self.p.height + dir * CROUCH_SPEED * TICK_DT_F32;
         self.p.height = h.clamp(CROUCH_HEIGHT, HEIGHT);
     }
@@ -90,10 +90,10 @@ impl<'a> Step<'a> {
 fn wish_dir(x: f32, z: f32, yaw: f32) -> (f32, f32) {
     let mag = x.hypot(z);
 
-    let (mv_x, mv_z) = if mag > 1.0 { (x / mag, z / mag) } else { (x, z) };
+    let (x, z) = if mag > 1.0 { (x / mag, z / mag) } else { (x, z) };
 
     let (yaw_sin, yaw_cos) = yaw.sin_cos();
-    (yaw_cos * mv_x + yaw_sin * mv_z, -yaw_sin * mv_x + yaw_cos * mv_z)
+    (yaw_cos * x + yaw_sin * z, -yaw_sin * x + yaw_cos * z)
 }
 
 fn move_toward(from: f32, to: f32, delta: f32) -> f32 {
@@ -150,7 +150,7 @@ mod tests {
         let inp = PlayerIntentSim::<bool> {
             held: PlayerIntentSimHeld {
                 // In Godot, "forward" is -z
-                mv_z: -1.0,
+                z: -1.0,
                 ..Default::default()
             },
             edges: PlayerIntentSimEdges { ..Default::default() },
@@ -167,7 +167,7 @@ mod tests {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim::<bool> {
             held: PlayerIntentSimHeld {
-                mv_z: -1.0,
+                z: -1.0,
                 yaw: std::f32::consts::FRAC_PI_2,
                 ..Default::default()
             },
@@ -185,11 +185,7 @@ mod tests {
     fn mv_hor_diagonal_input_is_clamped() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim::<bool> {
-            held: PlayerIntentSimHeld {
-                mv_x: 1.0,
-                mv_z: 1.0,
-                ..Default::default()
-            },
+            held: PlayerIntentSimHeld { x: 1.0, z: 1.0, ..Default::default() },
             ..Default::default()
         };
 
@@ -203,7 +199,7 @@ mod tests {
     fn mv_hor_inp_release_stops_in_about_a_third_of_a_second() {
         let mut p = PlayerState::spawn(0.0, 0.0);
         let inp = PlayerIntentSim::<bool> {
-            held: PlayerIntentSimHeld { mv_z: -1.0, ..Default::default() },
+            held: PlayerIntentSimHeld { z: -1.0, ..Default::default() },
             ..Default::default()
         };
 

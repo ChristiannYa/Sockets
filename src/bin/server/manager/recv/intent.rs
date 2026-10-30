@@ -64,10 +64,10 @@ fn decode(
     let z = qua::player::intent::MV.decode(reader.read(&FieldName::IntentMvZ));
     let yaw = qua::player::intent::YAW.decode(reader.read(&FieldName::IntentYaw));
     let jump_ct = reader.read(&FieldName::IntentJump) as u8;
-    let crouch = reader.read(&FieldName::IntentCrouch) == 1;
+    let is_crouching = reader.read(&FieldName::IntentCrouch) == 1;
 
     let held =
-        PlayerIntentSimHeld { mv_x: x, mv_z: z, yaw, is_crouching: crouch };
+        PlayerIntentSimHeld { x, z, yaw, is_crouching };
     let edges = PlayerIntentSimEdges { jump: jump_ct };
     let sim = PlayerIntentSim::<u8> { held, edges };
 

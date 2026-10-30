@@ -1,7 +1,7 @@
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct PlayerIntentSimHeld {
-    pub mv_x: f32,
-    pub mv_z: f32,
+    pub x: f32,
+    pub z: f32,
     pub yaw: f32,
     pub is_crouching: bool,
 }

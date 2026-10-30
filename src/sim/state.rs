@@ -6,7 +6,7 @@ pub struct PlayerState {
     pub vel: [f32; 3],
     pub height: f32,
     pub yaw: f32,
-    pub crouching: bool,
+    pub is_crouching: bool,
     pub is_on_floor: bool,
 }
 
@@ -17,7 +17,7 @@ impl PlayerState {
             vel: [0.0; 3],
             height: HEIGHT,
             yaw: 0.0,
-            crouching: false,
+            is_crouching: false,
             is_on_floor: true,
         }
     }

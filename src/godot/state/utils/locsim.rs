@@ -93,8 +93,8 @@ impl LocalSim {
 
         let intent = PlayerIntentSim {
             held: PlayerIntentSimHeld {
-                mv_x: pqua::MV.decode(pqua::MV.encode(x)),
-                mv_z: pqua::MV.decode(pqua::MV.encode(z)),
+                x: pqua::MV.decode(pqua::MV.encode(x)),
+                z: pqua::MV.decode(pqua::MV.encode(z)),
                 yaw: pqua::YAW.decode(pqua::YAW.encode(yaw)),
                 is_crouching,
             },
@@ -152,7 +152,7 @@ impl LocalSim {
         state.pos = [p.x, p.y, p.z];
         state.vel = [vx, vy, vz];
         state.yaw = p.yaw;
-        state.crouching = p.is_crouching;
+        state.is_crouching = p.is_crouching;
 
         // Valid as long as the floor is a flat plane
         state.is_on_floor = p.y <= FLOOR_Y

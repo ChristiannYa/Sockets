@@ -205,7 +205,7 @@ impl Player {
             (FieldName::VelX, plqua::VEL_HOR.encode(s.vel[0])),
             (FieldName::VelY, plqua::VEL_Y.encode(s.vel[1])),
             (FieldName::VelZ, plqua::VEL_HOR.encode(s.vel[2])),
-            (FieldName::IsCrouching, s.crouching as u32),
+            (FieldName::IsCrouching, s.is_crouching as u32),
         ]
     }
 
