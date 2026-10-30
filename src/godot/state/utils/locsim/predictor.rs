@@ -1,7 +1,7 @@
 use crate::{
     pkt::Seq,
     qua::player as pqua,
-    sim::{PlayerIntentSim, PlayerState},
+    sim::{PlayerIntentSim, PlayerState, Step},
     util::now,
 };
 use std::collections::VecDeque;
@@ -104,5 +104,20 @@ impl Predictor {
         self.ring.retain(|en| en.seq.is_newer_than(simed_seq));
 
         predicted
+    }
+
+    /// Re-simulates every remaining entry on top of `state`, oldest first.
+    ///
+    /// Each entry's prediction is overwritten with the replayed result.
+    /// Later acks compare against these, so leaving the old ones would flag
+    /// a disagreement that has just been corrected.
+    pub(super) fn replay(&mut self, state: &mut PlayerState) {
+        for en in &mut self.ring {
+            Step::new(state, &en.intent).run();
+
+            // If the overwrite did not occur, the next snapshot would be
+            // compared against a prediction from before the correction
+            en.after = *state;
+        }
     }
 }

@@ -81,7 +81,13 @@ impl LocalSim {
             });
 
             if err.is_none_or(|e| e > pos_tolerance()) {
+                let height = state.height;
                 Self::rebase(state, &server);
+                self.predictor.replay(state);
+
+                // height already includes the steps the replay just repeated,
+                // so replaying them would overshoot; keep the client's own
+                state.height = height;
             }
         }
 
