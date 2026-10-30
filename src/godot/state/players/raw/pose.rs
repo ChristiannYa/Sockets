@@ -34,7 +34,7 @@ impl RawPose {
         let loc_hor_qua = qua::player::LOC_HOR;
         Some(PoseSample {
             x: loc_hor_qua.decode(self.x?),
-            y: qua::player::intent::Y.decode(self.y?),
+            y: qua::player::LOC_VER.decode(self.y?),
             z: loc_hor_qua.decode(self.z?),
             yaw: qua::player::intent::YAW.decode(self.yaw?),
             is_crouching: self.is_crouching? == 1,

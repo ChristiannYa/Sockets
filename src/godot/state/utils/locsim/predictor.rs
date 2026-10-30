@@ -27,7 +27,7 @@ const CAP: usize = 64;
 /// to be too frequent, a margin goes here
 pub(super) fn pos_tolerance() -> f32 {
     let step = pqua::LOC_HOR.step();
-    let diag = step.hypot(pqua::intent::Y.step()).hypot(step);
+    let diag = step.hypot(pqua::LOC_VER.step()).hypot(step);
     diag / 2.0
 }
 

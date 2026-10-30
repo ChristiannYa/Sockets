@@ -6,6 +6,3 @@ pub const MV: FixedPoint =
 
 pub const YAW: FixedPoint =
     FixedPoint::new(TAU / 1024.0, 512, FieldName::IntentYaw.blen());
-
-pub const Y: FixedPoint =
-    FixedPoint::new(0.05, 20, FieldName::LocationY.blen());

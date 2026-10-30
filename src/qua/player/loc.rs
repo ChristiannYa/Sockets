@@ -9,6 +9,9 @@ pub const VEL_HOR: FixedPoint =
 
 pub const LOC_HOR: FixedPoint = FieldName::LocationX.fpt();
 
+pub const LOC_VER: FixedPoint =
+    FixedPoint::new(0.05, 20, FieldName::LocationY.blen());
+
 impl FieldName {
     const fn fpt(self) -> FixedPoint {
         let bits_len = self.blen();
